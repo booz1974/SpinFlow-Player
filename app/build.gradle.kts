@@ -24,8 +24,8 @@ android {
         applicationId = localProperty("spinflow.applicationId") ?: "nl.jeroen.massqueue"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "3.3.2"
+        versionCode = 11
+        versionName = "3.3.3"
         resValue("string", "app_name", "SpinFlow")
         buildConfigField(
             "String", "BUILD_TIME",
