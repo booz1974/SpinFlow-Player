@@ -10,19 +10,7 @@
   <img src="docs/feature-graphic.jpg" alt="SpinFlow Player: Music Assistant Queue Control" width="100%">
 </p>
 
-<p align="center">
-  <img src="docs/screenshot-minimal-eettafel.jpg" alt="SpinFlow in minimal mode (compacte header) op de Eettafel" width="320">
-</p>
-
 SpinFlow is een snelle, betrouwbare bediening voor Music Assistant (MA), los van de Home Assistant Ingress-proxy, met slimme functies voor thuisgebruik: wachtrijbeheer, radio met live nummerinfo, groepsvolume, zoeken, een AI Radio DJ en een cassettebandje dat meedraait met je muziek.
-
-<p align="center">
-  <img src="docs/screenshot-player.jpg" alt="Speler met wachtrij" width="260">
-  &nbsp;
-  <img src="docs/screenshot-search.jpg" alt="Zoeken met albums" width="260">
-  &nbsp;
-  <img src="docs/screenshot-themes.jpg" alt="Kleurthema's" width="260">
-</p>
 
 <p align="center">
   <img src="docs/screenshot-cassette-player.jpg" alt="Cassettebandje met speler en wachtrij" width="260">
