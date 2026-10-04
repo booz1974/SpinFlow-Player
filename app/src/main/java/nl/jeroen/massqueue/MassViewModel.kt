@@ -22,13 +22,6 @@ private const val DEFAULT_HOST_INSTRUCTIONS_NL =
     "vermijd opsommingen en clichés, noem concrete details wanneer die beschikbaar zijn, spreek " +
     "vloeiend Nederlands en zorg voor een geloofwaardige radioflow tussen de segmenten."
 
-/**
- * Naam van het vaste hulp-station dat de Muziek Wizard hergebruikt wanneer je
- * een playlist met presentator start. MA's AI Radio start alleen via een station,
- * dus we overschrijven hierin telkens de bron-playlist, de host en de speler.
- */
-private const val WIZARD_STATION_NAME = "Wizard"
-
 /** Stapgrootte (procentpunten) voor volume +/-. */
 const val GROUP_VOLUME_STEP = 5
 
@@ -1147,9 +1140,17 @@ class MassViewModel : ViewModel() {
 
     fun stopAiRadio() {
         val playerId = _uiState.value.selectedPlayerId ?: return
+        val c = client ?: return
         viewModelScope.launch {
             try {
-                client?.stopAiRadio(playerId)
+                // Eerst de sticky queue-DJ eraf (scope queues.control); een station-run stoppen
+                // vraagt config.providers.write, die fout is dan niet erg als dit al lukte.
+                val djCleared = runCatching { c.setQueueDj(playerId, null) }.isSuccess
+                try {
+                    c.stopAiRadio(playerId)
+                } catch (e: Exception) {
+                    if (!djCleared) throw e
+                }
                 refreshAfterCommand()
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = "AI Radio stop mislukt: ${e.message}") }
@@ -1317,9 +1318,10 @@ class MassViewModel : ViewModel() {
     }
 
     /**
-     * Wizard-pad: start de gekozen playlist als AI Radio met een bestaande presentator.
-     * Hergebruikt (of maakt) het vaste hulp-station [WIZARD_STATION_NAME], overschrijft
-     * daarin bron-playlist + host + speler, slaat op en start het station.
+     * Wizard-pad: speelt de gekozen playlist af met een bestaande presentator als sticky
+     * queue-DJ (`ai_radio/queue_dj/set`). Anders dan een station opslaan en starten vraagt
+     * dat alleen scope `queues.control`, dus het werkt ook met een token zonder
+     * `config.providers.write`.
      */
     fun startWizardRadioWithHost(playerId: String, playlist: MassPlaylist, host: AiRadioHost) {
         val c = client ?: return
@@ -1327,25 +1329,10 @@ class MassViewModel : ViewModel() {
         recordPlaylistUsage(playlist.uri)
         _uiState.update { it.copy(activePlaylistName = playlist.name, activePlaylistUri = playlist.uri) }
         viewModelScope.launch {
+            onSavePlaylist?.invoke(playlist.name, playlist.uri)
             try {
-                val existing = runCatching { c.getAiRadioStations() }.getOrDefault(emptyList())
-                    .firstOrNull { it.name.equals(WIZARD_STATION_NAME, ignoreCase = true) }
-                val base = existing
-                    ?: runCatching { c.getAiRadioStationTemplate() }.getOrNull()
-                    ?: AiRadioStation(id = "", name = WIZARD_STATION_NAME)
-                val station = base.copy(
-                    name = WIZARD_STATION_NAME,
-                    sourcePlaylistId = playlist.itemIdFromUri ?: base.sourcePlaylistId,
-                    sourcePlaylistProvider = playlist.providerFromUri ?: base.sourcePlaylistProvider,
-                    hostId = host.id,
-                    defaultPlayerId = playerId
-                )
-                c.saveAiRadioStation(station)
-                // Na opslaan het (mogelijk net aangemaakte) station-id ophalen.
-                val toStart = runCatching { c.getAiRadioStations() }.getOrDefault(emptyList())
-                    .firstOrNull { it.name.equals(WIZARD_STATION_NAME, ignoreCase = true) }
-                    ?: station
-                c.startAiRadio(playerId, toStart)
+                c.setQueueDj(playerId, host.id)
+                c.playMedia(playerId, playlist.uri, "replace")
                 refreshAfterCommand()
                 loadAiRadioData()
             } catch (e: Exception) {

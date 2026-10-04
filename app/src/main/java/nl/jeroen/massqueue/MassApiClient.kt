@@ -1458,6 +1458,17 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         )
     }
 
+    /**
+     * Zet (of met `null`: verwijdert) de sticky AI DJ op een wachtrij. Vraagt alleen scope
+     * `queues.control`, anders dan `start`/`stop`/`stations/save` (`config.providers.write`).
+     */
+    suspend fun setQueueDj(queueId: String, hostId: String?) {
+        callAiRadio(
+            cmd("queue_dj/set"),
+            JSONObject().put("queue_id", queueId).put("host_id", hostId ?: JSONObject.NULL)
+        )
+    }
+
     /** Exacte vorm die de MA-web-app stuurt (WS-frame): platte args met player_id_override. */
     suspend fun startAiRadio(playerId: String, station: AiRadioStation) {
         callAiRadio(
