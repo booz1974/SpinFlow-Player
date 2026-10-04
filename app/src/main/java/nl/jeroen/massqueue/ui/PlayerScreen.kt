@@ -285,7 +285,7 @@ fun PlayerScreen(
                     if (showCompactHeader) {
                         TopAppBar(
                             title = {
-                                SpinFlowWordmark(showLogo = true)
+                                SpinFlowWordmark()
                             },
                             actions = {
                                 Row(
@@ -355,12 +355,12 @@ fun PlayerScreen(
                             Surface(
                                 modifier = Modifier
                                     .align(Alignment.Center)
-                                    .padding(top = 28.dp),
+                                    .padding(top = 68.dp),
                                 shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
                                 shadowElevation = 2.dp
                             ) {
-                                SpinFlowWordmark(Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+                                SpinFlowWordmark(Modifier.padding(horizontal = 9.dp, vertical = 4.dp), scale = 0.68f)
                             }
 
                             // Nieuwe playlist/zender = nieuw bandje: kies willekeurig kant A of B
@@ -3706,61 +3706,59 @@ private val Poppins = FontFamily(
 
 /**
  * App-naam als woordmerk: "Spin" in de tekstkleur, "Flow" in de steunkleur van het thema,
- * daaronder een gespatieerd "PLAYER" en de ondertitel, links uitgelijnd. Met [showLogo]
- * staat de S links, even hoog als de twee bovenste regels; de ondertitel loopt dan
- * over de volle breedte onder logo en naam door.
+ * daaronder een gespatieerd "PLAYER", links uitgelijnd. De S staat links, even hoog als
+ * die twee regels; de ondertitel loopt over de volle breedte onder logo en naam door.
+ * Zelfde opmaak in de compacte header en (met [scale] kleiner) op het bandje.
  */
 @Composable
-private fun SpinFlowWordmark(modifier: Modifier = Modifier, showLogo: Boolean = false) {
+private fun SpinFlowWordmark(modifier: Modifier = Modifier, scale: Float = 1f) {
     Column(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (showLogo) {
-                Icon(
-                    painterResource(R.drawable.ic_spinflow_s),
-                    contentDescription = "SpinFlow",
-                    tint = Color.Unspecified,
-                    modifier = Modifier
-                        .padding(end = 8.dp)
-                        .height(40.dp)
-                        .aspectRatio(291f / 302f)
+            Icon(
+                painterResource(R.drawable.ic_spinflow_s),
+                contentDescription = "SpinFlow",
+                tint = Color.Unspecified,
+                modifier = Modifier
+                    .padding(end = 8.dp * scale)
+                    .height(40.dp * scale)
+                    .aspectRatio(291f / 302f)
+            )
+            // "SpinFlow" + "PLAYER": samen 40dp hoog (x scale), net als de S
+            Column {
+                Text(
+                    buildAnnotatedString {
+                        append("Spin")
+                        withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("Flow") }
+                    },
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp * scale,
+                    lineHeight = 28.sp * scale,
+                    letterSpacing = (-0.5).sp * scale,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Text(
+                    "PLAYER",
+                    fontFamily = Poppins,
+                    fontWeight = FontWeight.Light,
+                    fontSize = 10.sp * scale,
+                    lineHeight = 12.sp * scale,
+                    letterSpacing = 7.sp * scale,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
                 )
             }
-            SpinFlowNameLines()
         }
+        val subtitle = MaterialTheme.typography.labelMedium
         Text(
             "Music Assistant Queue Control",
-            style = MaterialTheme.typography.labelMedium,
+            style = subtitle.copy(
+                fontSize = subtitle.fontSize * scale,
+                lineHeight = subtitle.lineHeight * scale,
+                letterSpacing = subtitle.letterSpacing * scale
+            ),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
-        )
-    }
-}
-
-/** "SpinFlow" met daaronder het gespatieerde "PLAYER" (samen 40dp hoog). */
-@Composable
-private fun SpinFlowNameLines() {
-    Column {
-        Text(
-            buildAnnotatedString {
-                append("Spin")
-                withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("Flow") }
-            },
-            fontFamily = Poppins,
-            fontWeight = FontWeight.Bold,
-            fontSize = 26.sp,
-            lineHeight = 28.sp,
-            letterSpacing = (-0.5).sp,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1
-        )
-        Text(
-            "PLAYER",
-            fontFamily = Poppins,
-            fontWeight = FontWeight.Light,
-            fontSize = 10.sp,
-            lineHeight = 12.sp,
-            letterSpacing = 7.sp,
-            color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1
         )
     }

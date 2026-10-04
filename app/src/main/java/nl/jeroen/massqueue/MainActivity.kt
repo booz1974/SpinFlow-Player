@@ -154,7 +154,8 @@ class MainActivity : ComponentActivity() {
                     val s = settingsStore.loadSendspin()
                     sendspin = s
                     viewModel.setPhonePlayer(s.clientId)
-                    if (s.enabled) SendspinPlaybackService.start(this@MainActivity)
+                    // Pas starten als er een server is; bij een verse installatie start hij na het opslaan.
+                    if (s.enabled && s.externalUrl != null) SendspinPlaybackService.start(this@MainActivity)
                 }
 
                 LaunchedEffect(Unit) {

@@ -362,7 +362,7 @@ class SettingsStore(private val context: Context) {
             clientName = prefs[KEY_SENDSPIN_CLIENT_NAME]
                 ?.takeIf { it.isNotBlank() && it != LEGACY_SENDSPIN_CLIENT_NAME }
                 ?: defaultSendspinClientName(context),
-            enabled = prefs[KEY_SENDSPIN_ENABLED] ?: false,
+            enabled = prefs[KEY_SENDSPIN_ENABLED] ?: true, // standaard aan: telefoon als speler
             localUrl = prefs[KEY_SENDSPIN_LOCAL_URL]?.takeIf { it.isNotBlank() } ?: DEFAULT_SENDSPIN_LOCAL_URL,
             externalUrl = sendspinUrlFromServerUrl(prefs[KEY_URL].orEmpty()),
             token = prefs[KEY_TOKEN].orEmpty().let { stored ->
