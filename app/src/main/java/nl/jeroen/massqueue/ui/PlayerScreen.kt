@@ -285,34 +285,7 @@ fun PlayerScreen(
                     if (showCompactHeader) {
                         TopAppBar(
                             title = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        painterResource(R.drawable.ic_spinflow),
-                                        contentDescription = "SpinFlow",
-                                        tint = Color.Unspecified,
-                                        modifier = Modifier
-                                            .padding(end = 10.dp)
-                                            .size(36.dp)
-                                    )
-                                    Column {
-                                        Text(
-                                            buildAnnotatedString {
-                                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("SpinFlow") }
-                                                append(" PLAYER")
-                                            },
-                                            style = MaterialTheme.typography.titleLarge,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            "Music Assistant Queue Control",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
+                                SpinFlowWordmark(showLogo = true)
                             },
                             actions = {
                                 Row(
@@ -387,26 +360,7 @@ fun PlayerScreen(
                                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
                                 shadowElevation = 2.dp
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        buildAnnotatedString {
-                                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("SpinFlow") }
-                                            append(" PLAYER")
-                                        },
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 1
-                                    )
-                                    Text(
-                                        "Music Assistant Queue Control",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1
-                                    )
-                                }
+                                SpinFlowWordmark(Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
                             }
 
                             // Nieuwe playlist/zender = nieuw bandje: kies willekeurig kant A of B
@@ -668,7 +622,8 @@ fun PlayerScreen(
                     Text(msg, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
                 }
 
-                Spacer(Modifier.height(16.dp))
+                // 4dp + de 4dp onderrand van de spelerkiezer = 8dp, net als tussen kaart en knoppen.
+                Spacer(Modifier.height(4.dp))
 
                 val queue = state.queue
 
@@ -725,7 +680,8 @@ fun PlayerScreen(
                         }
 
                         item {
-                            Spacer(Modifier.height(12.dp))
+                            // Alleen afstand tot de "Vorige"-lijst; zonder die lijst staat er al 8dp boven.
+                            if (queue.pastItems.isNotEmpty()) Spacer(Modifier.height(12.dp))
                             NowPlayingHero(
                                 track = queue.currentItem,
                                 isPlaying = isPlaying,
@@ -3743,6 +3699,73 @@ private fun formatDuration(seconds: Int?): String {
 }
 
 private val CassetteMarker = FontFamily(Font(R.font.permanent_marker))
+private val Poppins = FontFamily(
+    Font(R.font.poppins_bold, FontWeight.Bold),
+    Font(R.font.poppins_light, FontWeight.Light)
+)
+
+/**
+ * App-naam als woordmerk: "Spin" in de tekstkleur, "Flow" in de steunkleur van het thema,
+ * daaronder een gespatieerd "PLAYER" en de ondertitel, links uitgelijnd. Met [showLogo]
+ * staat de S links, even hoog als de twee bovenste regels; de ondertitel loopt dan
+ * over de volle breedte onder logo en naam door.
+ */
+@Composable
+private fun SpinFlowWordmark(modifier: Modifier = Modifier, showLogo: Boolean = false) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (showLogo) {
+                Icon(
+                    painterResource(R.drawable.ic_spinflow_s),
+                    contentDescription = "SpinFlow",
+                    tint = Color.Unspecified,
+                    modifier = Modifier
+                        .padding(end = 8.dp)
+                        .height(40.dp)
+                        .aspectRatio(291f / 302f)
+                )
+            }
+            SpinFlowNameLines()
+        }
+        Text(
+            "Music Assistant Queue Control",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+    }
+}
+
+/** "SpinFlow" met daaronder het gespatieerde "PLAYER" (samen 40dp hoog). */
+@Composable
+private fun SpinFlowNameLines() {
+    Column {
+        Text(
+            buildAnnotatedString {
+                append("Spin")
+                withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append("Flow") }
+            },
+            fontFamily = Poppins,
+            fontWeight = FontWeight.Bold,
+            fontSize = 26.sp,
+            lineHeight = 28.sp,
+            letterSpacing = (-0.5).sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
+        )
+        Text(
+            "PLAYER",
+            fontFamily = Poppins,
+            fontWeight = FontWeight.Light,
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            letterSpacing = 7.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
+        )
+    }
+}
+
 private val LabelPaper = Color(0xFFF8F3E3)
 private val LabelInk = Color(0xFF1B1A17)
 private val LabelRule = Color(0x332B2823)
