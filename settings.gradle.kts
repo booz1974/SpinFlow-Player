@@ -21,5 +21,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MassQueueApp"
+rootProject.name = "SpinFlow"
 include(":app")
