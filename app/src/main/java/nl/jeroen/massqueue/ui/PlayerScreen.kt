@@ -586,12 +586,12 @@ fun PlayerScreen(
                             modifier = Modifier
                                 .padding(vertical = 4.dp)
                                 .background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(16.dp))
-                                .padding(horizontal = 12.dp, vertical = 4.dp),
+                                .padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                Icons.Filled.Mic, 
-                                contentDescription = null, 
+                                Icons.Filled.Mic,
+                                contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -602,6 +602,17 @@ fun PlayerScreen(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 fontWeight = FontWeight.Bold
                             )
+                            IconButton(
+                                onClick = { viewModel.stopAiRadio() },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "DJ stoppen",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
                         }
                     }
                 }
