@@ -469,139 +469,211 @@ fun SettingsScreen(
 
             // 3. Geofencing & Locations Card
             item {
-                SettingsSectionCard(
-                    title = "Locaties & Geofencing",
-                    subtitle = "Thuislocatie bepalen om slimme spelerfiltering in te schakelen",
-                    icon = Icons.Outlined.PinDrop
-                ) {
-                    locations.forEach { loc ->
-                        val isSelected = loc.id == activeLocationId
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onSelectLocation(loc.id) }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = { onSelectLocation(loc.id) }
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        loc.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                    )
-                                    val lat = loc.lat
-                                    val lon = loc.lon
-                                    val coordsText = if (lat != null && lon != null)
-                                        "GPS: ${"%.4f".format(lat)}, ${"%.4f".format(lon)}"
-                                    else
-                                        "Geen GPS coördinaten ingesteld"
-                                    Text(
-                                        coordsText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                if (locations.size > 1) {
-                                    IconButton(onClick = { onDeleteLocation(loc.id) }) {
-                                        Icon(
-                                            Icons.Default.DeleteOutline,
-                                            contentDescription = "Verwijderen",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { showAddLocation = true },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Locatie")
-                        }
-
-                        Button(
-                            onClick = onPinLocation,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("GPS Pin")
-                        }
-                    }
-                }
-            }
-
-            // 4. Local Players Filtering Card
-            item {
-                val localCount = players.count { p ->
-                    localPlayerIds.contains(p.id) || localPlayerIds.contains(p.name.lowercase().trim())
-                }
-
-                SettingsActionCard(
-                    title = "Thuislocatie Filter (150m)",
-                    subtitle = "Lokale speakers verbergen wanneer je buitenshuis bent",
-                    icon = Icons.Outlined.HomeWork,
-                    badgeText = "$localCount lokaal",
-                    onClick = { showLocalPlayers = true }
-                )
-            }
-
-            // 5. Visible Players Card
-            item {
-                val visibleCount = players.count { p ->
-                    !(hiddenPlayerIds.contains(p.id) || hiddenPlayerIds.contains(p.name.lowercase().trim()))
-                }
-
-                SettingsActionCard(
-                    title = "Spelers in Keuzelijst",
-                    subtitle = "Verberg of toon specifieke spelers in het hoofdmenu",
-                    icon = Icons.Outlined.Visibility,
-                    badgeText = "$visibleCount / ${players.size}",
-                    onClick = { showHiddenPlayers = true }
-                )
-            }
-
-            // 5b. Spelers die in MA op "Hide player in UI: Always" staan
-            item {
                 SettingsSectionCard {
+                    // Zelfde uitklap-patroon als Music Assistant Server
+                    var locationsExpanded by remember { mutableStateOf(false) }
+                    val activeLocationName = locations.firstOrNull { it.id == activeLocationId }?.name
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color.Transparent,
+                        color = Color.Transparent, // geen binnenvlak: icoon op één lijn met de andere kaarten
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .clickable { onToggleShowMaHiddenPlayers?.invoke(!showMaHiddenPlayers) }
+                            .clickable { locationsExpanded = !locationsExpanded }
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SettingsRoundIcon(Icons.Outlined.PinDrop)
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Locaties & Geofencing",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    activeLocationName?.let { "Actief: $it" }
+                                        ?: "Thuislocatie bepalen om slimme spelerfiltering in te schakelen",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Icon(
+                                if (locationsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = if (locationsExpanded) "Locaties inklappen" else "Locaties uitklappen"
+                            )
+                        }
+                    }
+
+                    if (locationsExpanded) {
+                        Spacer(Modifier.height(8.dp))
+                        locations.forEach { loc ->
+                            val isSelected = loc.id == activeLocationId
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { onSelectLocation(loc.id) }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { onSelectLocation(loc.id) }
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            loc.name,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                        val lat = loc.lat
+                                        val lon = loc.lon
+                                        val coordsText = if (lat != null && lon != null)
+                                            "GPS: ${"%.4f".format(lat)}, ${"%.4f".format(lon)}"
+                                        else
+                                            "Geen GPS coördinaten ingesteld"
+                                        Text(
+                                            coordsText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (locations.size > 1) {
+                                        IconButton(onClick = { onDeleteLocation(loc.id) }) {
+                                            Icon(
+                                                Icons.Default.DeleteOutline,
+                                                contentDescription = "Verwijderen",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showAddLocation = true },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Locatie")
+                            }
+
+                            Button(
+                                onClick = onPinLocation,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.MyLocation, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("GPS Pin")
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                        val localCount = players.count { p ->
+                            localPlayerIds.contains(p.id) || localPlayerIds.contains(p.name.lowercase().trim())
+                        }
+                        SettingsActionRow(
+                            title = "Thuislocatie Filter (150m)",
+                            subtitle = "Lokale speakers verbergen wanneer je buitenshuis bent",
+                            icon = Icons.Outlined.HomeWork,
+                            badgeText = "$localCount lokaal",
+                            onClick = { showLocalPlayers = true }
+                        )
+                    }
+                }
+            }
+
+            // Spelers: keuzelijst, verborgen spelers, roepnamen, vaste spelers en disco-speler
+            item {
+                SettingsSectionCard {
+                    // Zelfde uitklap-patroon als Music Assistant Server
+                    var playersExpanded by remember { mutableStateOf(false) }
+                    val visibleCount = players.count { p ->
+                        !(hiddenPlayerIds.contains(p.id) || hiddenPlayerIds.contains(p.name.lowercase().trim()))
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Transparent, // geen binnenvlak: icoon op één lijn met de andere kaarten
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { playersExpanded = !playersExpanded }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SettingsRoundIcon(Icons.Outlined.Speaker)
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Spelers",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "Keuzelijst, roepnamen, vaste spelers en disco ($visibleCount / ${players.size} zichtbaar)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Icon(
+                                if (playersExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = if (playersExpanded) "Speler-opties inklappen" else "Speler-opties uitklappen"
+                            )
+                        }
+                    }
+
+                    if (playersExpanded) {
+                        Spacer(Modifier.height(8.dp))
+
+                        SettingsActionRow(
+                            title = "Spelers in Keuzelijst",
+                            subtitle = "Verberg of toon specifieke spelers in het hoofdmenu",
+                            icon = Icons.Outlined.Visibility,
+                            badgeText = "$visibleCount / ${players.size}",
+                            onClick = { showHiddenPlayers = true }
+                        )
+
+                        // Spelers die in MA op "Hide player in UI: Always" staan
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onToggleShowMaHiddenPlayers?.invoke(!showMaHiddenPlayers) }
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             SettingsRoundIcon(Icons.Outlined.VisibilityOff)
@@ -625,45 +697,36 @@ fun SettingsScreen(
                                 onCheckedChange = { onToggleShowMaHiddenPlayers?.invoke(it) }
                             )
                         }
+
+                        val aliasedCount = players.count { p -> !playerAliases[p.id].isNullOrBlank() }
+                        SettingsActionRow(
+                            title = "Speler Roepnamen (Aliassen)",
+                            subtitle = "Geef speakers een aangepaste weergavenaam",
+                            icon = Icons.Outlined.Edit,
+                            badgeText = if (aliasedCount > 0) "$aliasedCount actief" else "Instellen",
+                            onClick = { showAliases = true }
+                        )
+
+                        // Vaste spelers (nooit onder "Overige spelers")
+                        val pinnedCount = players.count { it.id in pinnedPlayerIds }
+                        SettingsActionRow(
+                            title = "Vaste Spelers",
+                            subtitle = "Altijd bovenin de keuzelijst, nooit onder \"Overige spelers\"",
+                            icon = Icons.Outlined.PushPin,
+                            badgeText = if (pinnedCount > 0) "$pinnedCount vast" else "Instellen",
+                            onClick = { showPinnedPlayers = true }
+                        )
+
+                        val discoName = players.firstOrNull { it.id == discoPlayerId }?.name
+                        SettingsActionRow(
+                            title = "Disco-speler",
+                            subtitle = discoName ?: "Speler die de disco-schakelaar aan de groep toevoegt",
+                            icon = Icons.Outlined.Lightbulb,
+                            badgeText = if (discoName != null) "Gekozen" else "Instellen",
+                            onClick = { showDiscoPlayer = true }
+                        )
                     }
                 }
-            }
-
-            // 6. Player Aliases Card
-            item {
-                val aliasedCount = players.count { p -> !playerAliases[p.id].isNullOrBlank() }
-
-                SettingsActionCard(
-                    title = "Speler Roepnamen (Aliassen)",
-                    subtitle = "Geef speakers een aangepaste weergavenaam",
-                    icon = Icons.Outlined.Edit,
-                    badgeText = if (aliasedCount > 0) "$aliasedCount actief" else "Instellen",
-                    onClick = { showAliases = true }
-                )
-            }
-
-            // Vaste spelers (nooit onder "Overige spelers")
-            item {
-                val pinnedCount = players.count { it.id in pinnedPlayerIds }
-                SettingsActionCard(
-                    title = "Vaste Spelers",
-                    subtitle = "Altijd bovenin de keuzelijst, nooit onder \"Overige spelers\"",
-                    icon = Icons.Outlined.PushPin,
-                    badgeText = if (pinnedCount > 0) "$pinnedCount vast" else "Instellen",
-                    onClick = { showPinnedPlayers = true }
-                )
-            }
-
-            // 7. Disco Player Card
-            item {
-                val discoName = players.firstOrNull { it.id == discoPlayerId }?.name
-                SettingsActionCard(
-                    title = "Disco-speler",
-                    subtitle = discoName ?: "Speler die de disco-schakelaar aan de groep toevoegt",
-                    icon = Icons.Outlined.Lightbulb,
-                    badgeText = if (discoName != null) "Gekozen" else "Instellen",
-                    onClick = { showDiscoPlayer = true }
-                )
             }
 
             // App Footer
@@ -940,59 +1003,75 @@ private fun SettingsActionCard(
             .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-            ) {
-                Text(
-                    badgeText,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(Modifier.width(4.dp))
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+        SettingsActionRowContent(title, subtitle, icon, badgeText, Modifier.padding(16.dp))
+    }
+}
+
+/** Zelfde rij als [SettingsActionCard], maar zonder eigen kaart: voor binnen een uitklapbare kaart. */
+@Composable
+private fun SettingsActionRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    badgeText: String,
+    onClick: () -> Unit
+) {
+    SettingsActionRowContent(
+        title, subtitle, icon, badgeText,
+        Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun SettingsActionRowContent(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    badgeText: String,
+    modifier: Modifier
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(modifier),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SettingsRoundIcon(icon)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
+        Spacer(Modifier.width(8.dp))
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+        ) {
+            Text(
+                badgeText,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(Modifier.width(4.dp))
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
