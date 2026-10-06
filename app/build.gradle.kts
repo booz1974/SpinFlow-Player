@@ -33,9 +33,25 @@ android {
         )
     }
 
+    // Release-ondertekening uit local.properties (niet in git): spinflow.signing.storeFile,
+    // .storePassword, .keyAlias en .keyPassword. Zonder die regels blijft de release
+    // ongesigneerd, zodat de build op andere machines gewoon werkt.
+    val releaseStoreFile = localProperty("spinflow.signing.storeFile")
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = localProperty("spinflow.signing.storePassword")
+                keyAlias = localProperty("spinflow.signing.keyAlias")
+                keyPassword = localProperty("spinflow.signing.keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (releaseStoreFile != null) signingConfig = signingConfigs.getByName("release")
         }
     }
 
