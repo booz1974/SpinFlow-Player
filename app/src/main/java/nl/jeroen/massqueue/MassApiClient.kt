@@ -149,6 +149,17 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                     arr.optJSONObject(it)?.optString("output_protocol_id")?.takeIf { s -> s.isNotBlank() && s != "native" }
                 }.toSet()
             } ?: emptySet()
+            // hide_in_ui is wat MA zelf uitrekent (in de praktijk: true bij "always");
+            // hide_player_in_ui is de instelling, bv. ["always"] of ["when_unavailable", ...].
+            // De "when_..."-standen negeren we: die gelden voor alle telefoons die offline zijn.
+            val hideModes = p.optJSONArray("hide_player_in_ui")?.let { arr ->
+                (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }
+            } ?: emptyList()
+            val hiddenInMa = p.optBoolean("hide_in_ui", false) || "always" in hideModes
+            if (BuildConfig.DEBUG) android.util.Log.d(
+                "PLAYERDBG",
+                "$id '${p.optString("display_name")}' protocols=$outputProtocolIds hide_in_ui=${p.optBoolean("hide_in_ui")} hide_player_in_ui=$hideModes"
+            )
             val canGroupWith = p.optJSONArray("can_group_with")?.let { arr ->
                 (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }.toSet()
             }
@@ -171,7 +182,8 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                     syncedTo = p.optString("synced_to").takeIf { it.isNotBlank() && it != "null" },
                     activeGroup = p.optString("active_group").takeIf { it.isNotBlank() && it != "null" },
                     canGroupWith = canGroupWith,
-                    outputProtocolIds = outputProtocolIds
+                    outputProtocolIds = outputProtocolIds,
+                    hiddenInMa = hiddenInMa
                 )
             )
         }

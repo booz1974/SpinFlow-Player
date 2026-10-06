@@ -223,6 +223,7 @@ class SendspinPlaybackService : MediaLibraryService() {
     // ---- Sendspin ------------------------------------------------------------------
 
     private fun start(settings: SendspinSettings) {
+        if (BuildConfig.DEBUG) android.util.Log.d("PLAYERDBG", "eigen Sendspin client_id=${settings.clientId} name=${settings.clientName}")
         authClient = SendspinAuthClient(
             delegate = OkHttpClient.Builder()
                 .connectTimeout(CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS)

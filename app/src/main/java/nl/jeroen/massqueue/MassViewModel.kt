@@ -396,11 +396,12 @@ class MassViewModel : ViewModel() {
             // Haal spelers op
             val players = c.getAllPlayers()
             
-            // Filter spelers op basis van locatie
+            // Filter spelers op basis van locatie; de telefoon zelf is overal "lokaal"
             val filteredPlayers = if (_uiState.value.isNearLocation) {
                 players
             } else {
                 players.filter { player ->
+                    currentState.isOwnPlayer(player) ||
                     !_uiState.value.localPlayerIds.contains(player.id) &&
                     !_uiState.value.localPlayerIds.contains(player.name.lowercase().trim())
                 }
@@ -421,11 +422,13 @@ class MassViewModel : ViewModel() {
                 filteredPlayers.find { it.id == id }?.playbackState?.lowercase() == "playing" ||
                     queueSummaries[id]?.isPlaying == true
 
-            val playingId = filteredPlayers.firstOrNull { isPlayingNow(it.id) }?.id
-            val queuedId = filteredPlayers.firstOrNull { queueSummaries[it.id]?.hasItems == true }?.id
+            // Een in MA verborgen speler (bv. andermans telefoon) kiezen we nooit vanzelf
+            val candidates = filteredPlayers.filter { currentState.isPlayerListed(it) }
+            val playingId = candidates.firstOrNull { isPlayingNow(it.id) }?.id
+            val queuedId = candidates.firstOrNull { queueSummaries[it.id]?.hasItems == true }?.id
             val selected = currentState.selectedPlayerId?.let { id ->
                 if (filteredPlayers.any { it.id == id }) id else null
-            } ?: playingId ?: queuedId ?: filteredPlayers.firstOrNull()?.id
+            } ?: playingId ?: queuedId ?: candidates.firstOrNull()?.id
 
             // Houd bij wanneer elke speler voor het laatst begon met afspelen, zodat de
             // spelers-dropdown de meest actuele speler bovenaan kan tonen.
@@ -516,7 +519,7 @@ class MassViewModel : ViewModel() {
     private fun isPhonePlayerSelectedAndRunning(): Boolean {
         val state = _uiState.value
         val selected = state.players.firstOrNull { it.id == state.selectedPlayerId } ?: return false
-        return SendspinPlaybackService.status.value.running && state.isPhonePlayer(selected)
+        return SendspinPlaybackService.status.value.running && state.isOwnPlayer(selected)
     }
 
     /** Voedt de MediaSession/notificatie (lockscreen, bluetooth) met de nu-speelt-info. */
@@ -886,6 +889,10 @@ class MassViewModel : ViewModel() {
 
     fun setPinnedPlayerIds(ids: Set<String>) {
         _uiState.update { it.copy(pinnedPlayerIds = ids) }
+    }
+
+    fun setShowMaHiddenPlayers(show: Boolean) {
+        _uiState.update { it.copy(showMaHiddenPlayers = show) }
     }
 
     fun setPhonePlayer(clientId: String) {

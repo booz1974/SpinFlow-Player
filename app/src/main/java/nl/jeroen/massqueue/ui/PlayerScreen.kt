@@ -1644,19 +1644,21 @@ private fun MusicWizard(
 
 /**
  * De spelerslijst zoals die overal in de app hoort te verschijnen waar je een speler kiest:
- * verborgen spelers eruit (behalve de nu geselecteerde), meest actueel spelende/gevulde
- * speler bovenaan, daarna alfabetisch. Zelfde volgorde als de dropdown op het hoofdscherm.
+ * verborgen spelers eruit (in de app of in MA op "Always"; behalve de nu geselecteerde en de
+ * eigen telefoon), meest actueel spelende/gevulde speler bovenaan, daarna alfabetisch.
+ * Zelfde volgorde als de dropdown op het hoofdscherm.
  */
 private fun visibleSortedPlayers(state: UiState): List<MassPlayer> {
     fun label(player: MassPlayer) = playerLabel(player, state)
 
     return state.players.filter { player ->
-        player.id == state.selectedPlayerId ||
-        !(state.hiddenPlayerIds.contains(player.id) ||
-          state.hiddenPlayerIds.contains(player.name.lowercase().trim()))
+        player.id == state.selectedPlayerId || state.isOwnPlayer(player) ||
+        (state.isPlayerListed(player) &&
+          !(state.hiddenPlayerIds.contains(player.id) ||
+            state.hiddenPlayerIds.contains(player.name.lowercase().trim())))
     }.sortedWith(
         // Deze telefoon altijd bovenaan
-        compareByDescending<MassPlayer> { state.isPhonePlayer(it) }
+        compareByDescending<MassPlayer> { state.isOwnPlayer(it) }
             .thenByDescending {
                 it.playbackState?.lowercase() == "playing" || state.queueSummaries[it.id]?.isPlaying == true
             }
@@ -1669,7 +1671,7 @@ private fun visibleSortedPlayers(state: UiState): List<MassPlayer> {
 
 /** Naam in de keuzelijst: "Deze telefoon" voor de eigen Sendspin-speler, anders alias of MA-naam. */
 private fun playerLabel(player: MassPlayer, state: UiState): String =
-    if (state.isPhonePlayer(player)) "Deze telefoon" else state.playerAliases[player.id] ?: player.name
+    if (state.isOwnPlayer(player)) "Deze telefoon" else state.playerAliases[player.id] ?: player.name
 
 /**
  * True zolang de app in beeld is (lifecycle STARTED). Tik-lusjes in de UI (klokjes,
@@ -1689,7 +1691,7 @@ private fun rememberAppVisible(): Boolean {
  * geselecteerd zijn of spelen.
  */
 private fun isSecondaryPlayer(player: MassPlayer, state: UiState): Boolean {
-    if (player.id == state.selectedPlayerId || player.id in state.pinnedPlayerIds || state.isPhonePlayer(player)) return false
+    if (player.id == state.selectedPlayerId || player.id in state.pinnedPlayerIds || state.isOwnPlayer(player)) return false
     if (player.playbackState?.lowercase() == "playing" || state.queueSummaries[player.id]?.isPlaying == true) return false
     if (player.type.equals("light", ignoreCase = true)) return true
     return state.players.any { it.id != player.id && it.isGroup && player.id in it.groupMembers }
@@ -1830,7 +1832,7 @@ private fun PlayerDropdown(state: UiState, onSelect: (String) -> Unit) {
                                     )
                             )
                             Spacer(Modifier.width(10.dp))
-                            if (state.isPhonePlayer(player)) {
+                            if (state.isOwnPlayer(player)) {
                                 Icon(
                                     Icons.Filled.PhoneAndroid,
                                     contentDescription = null,

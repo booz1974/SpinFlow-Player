@@ -35,6 +35,7 @@ private val KEY_THEME = stringPreferencesKey("app_theme")
 private val KEY_COMPACT_HEADER = booleanPreferencesKey("compact_header")
 private val KEY_DISCO_PLAYER = stringPreferencesKey("disco_player_id")
 private val KEY_PINNED_PLAYERS = stringSetPreferencesKey("pinned_players")
+private val KEY_SHOW_MA_HIDDEN_PLAYERS = booleanPreferencesKey("show_ma_hidden_players")
 private val KEY_SENDSPIN_CLIENT_ID = stringPreferencesKey("sendspin_client_id")
 private val KEY_SENDSPIN_CLIENT_NAME = stringPreferencesKey("sendspin_client_name")
 private val KEY_SENDSPIN_ENABLED = booleanPreferencesKey("sendspin_enabled")
@@ -92,7 +93,8 @@ data class SettingsData(
     val selectedTheme: String,
     val showCompactHeader: Boolean,
     val discoPlayerId: String?,
-    val pinnedPlayerIds: Set<String>
+    val pinnedPlayerIds: Set<String>,
+    val showMaHiddenPlayers: Boolean
 )
 
 class SettingsStore(private val context: Context) {
@@ -153,7 +155,8 @@ class SettingsStore(private val context: Context) {
             selectedTheme = prefs[KEY_THEME] ?: "CASSETTE",
             showCompactHeader = prefs[KEY_COMPACT_HEADER] ?: false,
             discoPlayerId = prefs[KEY_DISCO_PLAYER],
-            pinnedPlayerIds = prefs[KEY_PINNED_PLAYERS] ?: emptySet()
+            pinnedPlayerIds = prefs[KEY_PINNED_PLAYERS] ?: emptySet(),
+            showMaHiddenPlayers = prefs[KEY_SHOW_MA_HIDDEN_PLAYERS] ?: false
         )
     }
 
@@ -320,6 +323,12 @@ class SettingsStore(private val context: Context) {
         usage.forEach { (uri, count) -> obj.put(uri, count) }
         context.dataStore.edit { prefs ->
             prefs[KEY_RADIO_USAGE] = obj.toString()
+        }
+    }
+
+    suspend fun saveShowMaHiddenPlayers(show: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SHOW_MA_HIDDEN_PLAYERS] = show
         }
     }
 

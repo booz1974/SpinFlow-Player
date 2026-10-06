@@ -167,6 +167,7 @@ class MainActivity : ComponentActivity() {
                     showCompactHeader = settings.showCompactHeader
                     viewModel.setDiscoPlayerId(settings.discoPlayerId)
                     viewModel.setPinnedPlayerIds(settings.pinnedPlayerIds)
+                    viewModel.setShowMaHiddenPlayers(settings.showMaHiddenPlayers)
                     if (configured && settings.url.isNotBlank()) {
                         viewModel.configureServer(
                             baseUrl = settings.url, 
@@ -288,6 +289,11 @@ class MainActivity : ComponentActivity() {
                                         val next = state.pinnedPlayerIds.let { if (id in it) it - id else it + id }
                                         viewModel.setPinnedPlayerIds(next)
                                         scope.launch { settingsStore.savePinnedPlayers(next) }
+                                    },
+                                    showMaHiddenPlayers = state.showMaHiddenPlayers,
+                                    onToggleShowMaHiddenPlayers = { show ->
+                                        viewModel.setShowMaHiddenPlayers(show)
+                                        scope.launch { settingsStore.saveShowMaHiddenPlayers(show) }
                                     },
                                     phonePlayerEnabled = sendspin?.enabled == true,
                                     phonePlayerName = sendspin?.clientName ?: defaultSendspinClientName(this@MainActivity),

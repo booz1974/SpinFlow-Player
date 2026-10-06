@@ -68,6 +68,8 @@ fun SettingsScreen(
     onSelectDiscoPlayer: ((String) -> Unit)? = null,
     pinnedPlayerIds: Set<String> = emptySet(),
     onTogglePinnedPlayer: ((String) -> Unit)? = null,
+    showMaHiddenPlayers: Boolean = false,
+    onToggleShowMaHiddenPlayers: ((Boolean) -> Unit)? = null,
     phonePlayerEnabled: Boolean = false,
     phonePlayerName: String = "",
     phonePlayerLocalUrl: String = DEFAULT_SENDSPIN_LOCAL_URL,
@@ -583,6 +585,48 @@ fun SettingsScreen(
                     badgeText = "$visibleCount / ${players.size}",
                     onClick = { showHiddenPlayers = true }
                 )
+            }
+
+            // 5b. Spelers die in MA op "Hide player in UI: Always" staan
+            item {
+                SettingsSectionCard {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.Transparent,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onToggleShowMaHiddenPlayers?.invoke(!showMaHiddenPlayers) }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SettingsRoundIcon(Icons.Outlined.VisibilityOff)
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Toon verborgen spelers",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    if (showMaHiddenPlayers) "Aan: ook spelers die in Music Assistant verborgen zijn"
+                                    else "Uit: spelers die in Music Assistant verborgen zijn, staan niet in de keuzelijst",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Switch(
+                                checked = showMaHiddenPlayers,
+                                onCheckedChange = { onToggleShowMaHiddenPlayers?.invoke(it) }
+                            )
+                        }
+                    }
+                }
             }
 
             // 6. Player Aliases Card

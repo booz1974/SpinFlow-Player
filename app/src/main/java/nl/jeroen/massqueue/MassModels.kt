@@ -25,7 +25,9 @@ data class MassPlayer(
     /** Spelers waarmee MA deze speler laat groeperen; null als MA dat niet meestuurt. */
     val canGroupWith: Set<String>? = null,
     /** Player-ID's van de protocol-spelers achter deze (universal) speler, bv. een Sendspin-client-ID. */
-    val outputProtocolIds: Set<String> = emptySet()
+    val outputProtocolIds: Set<String> = emptySet(),
+    /** In MA op "Hide player in UI: Always" (hide_in_ui / hide_player_in_ui bevat "always"). */
+    val hiddenInMa: Boolean = false
 ) {
     /** Groepsspeler (bv. "Woonkamer totaal"): volume_level is daar 0/leeg, group_volume is leidend. */
     val isGroup: Boolean
@@ -376,13 +378,23 @@ data class UiState(
     /** Spelers die altijd in de hoofdlijst van de dropdown staan, nooit onder "Overige". */
     val pinnedPlayerIds: Set<String> = emptySet(),
     /** Vaste Sendspin-client-ID van deze telefoon: player_id, of (MA 2.10+) output_protocol_id onder een universal player. */
-    val phonePlayerClientId: String? = null
+    val phonePlayerClientId: String? = null,
+    /** Debug/uitzondering: ook spelers tonen die in MA op "Hide player in UI: Always" staan. */
+    val showMaHiddenPlayers: Boolean = false
 ) {
-    /** Is dit de telefoon zelf (Sendspin-speler van deze app)? */
-    fun isPhonePlayer(player: MassPlayer): Boolean {
+    /**
+     * Is dit de eigen Sendspin-speler van dit toestel? Alleen op ID, nooit op naam: player_id is
+     * de client-ID (losse Sendspin-speler), of (MA 2.10+) de client-ID staat als
+     * output_protocol_id onder een universal player ("up…").
+     */
+    fun isOwnPlayer(player: MassPlayer): Boolean {
         val id = phonePlayerClientId ?: return false
         return player.id == id || id in player.outputProtocolIds
     }
+
+    /** Hoort deze speler in de keuzelijsten? De eigen telefoon altijd, ook als MA hem verbergt. */
+    fun isPlayerListed(player: MassPlayer): Boolean =
+        isOwnPlayer(player) || showMaHiddenPlayers || !player.hiddenInMa
 
     val activeLocation: MassLocation? get() = locations.find { it.id == activeLocationId }
     val homeLat: Double? get() = activeLocation?.lat
