@@ -11,11 +11,10 @@ import com.sendspin.protocol.AudioPlayer
 import com.sendspin.protocol.ClockSync
 import com.sendspin.protocol.PcmDriftCorrector
 import com.sendspin.protocol.StreamFormat
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 /**
- * Speelt de PCM-stream van Sendspin af via een [AudioTrack].
+ * Speelt de Sendspin-stream af via een [AudioTrack]. PCM gaat er direct in; FLAC en Opus
+ * worden per chunk eerst door een [ChunkDecoder] (MediaCodec) naar PCM omgezet.
  *
  * De bibliotheek zet binnenkomende chunks op servertijd in de [AudioBuffer]; deze speler
  * haalt ze eruit op het moment dat ze (na alles wat al in de AudioTrack zit) precies op
@@ -135,21 +134,38 @@ class SendspinAudioPlayer(
                     continue
                 }
 
-                val scheduled = clockSync.toLocalMicros(chunk.serverTimestampMicros, now) - buffer.staticDelayMicros
+                o.stats.maybeLog(o)
                 // Positief: we lopen achter (chunk had eerder moeten klinken); negatief: we zijn te vroeg
-                var drift = playAt - scheduled
+                var drift = playAt - scheduledMicros(chunk.serverTimestampMicros, now)
                 if (drift > HARD_DROP_MICROS) {
                     dropped++
+                    o.stats.dropped++
                     o.corrector.reset()
                     continue
                 }
+                // Een decoder kan uitvoer van een eerdere chunk teruggeven: plannen op diens eigen tijd
+                val t0 = System.nanoTime()
+                val block = o.decoder.decode(chunk.data, chunk.serverTimestampMicros)
+                o.stats.decoded((System.nanoTime() - t0) / 1000, block == null)
+                if (block == null) continue
+                if (block.serverMicros != chunk.serverTimestampMicros) {
+                    drift = playAt - scheduledMicros(block.serverMicros, now)
+                    if (drift > HARD_DROP_MICROS) {
+                        dropped++
+                        o.stats.dropped++
+                        o.corrector.reset()
+                        continue
+                    }
+                }
+                o.stats.drift(drift)
                 if (drift < -SILENCE_GAP_MICROS) {
                     // Gat in de tijdlijn (bijv. begin van de stream): opvullen met stilte
+                    o.stats.silenceMicros += -drift
                     o.writeSilence(-drift)
                     drift = 0
                 }
 
-                val pcm = o.toShorts(chunk.data)
+                val pcm = block.pcm
                 val blockMicros = pcm.size.toLong() / o.channels * 1_000_000L / o.sampleRate
                 val corrected = o.corrector.correct(pcm, drift, blockMicros)
                 o.write(corrected)
@@ -165,8 +181,12 @@ class SendspinAudioPlayer(
         }
     }
 
+    private fun scheduledMicros(serverMicros: Long, now: Long): Long =
+        clockSync.toLocalMicros(serverMicros, now) - buffer.staticDelayMicros
+
     private fun createOutput(format: StreamFormat): Output? {
-        if (!format.codec.equals("pcm", ignoreCase = true) || format.bitDepth != 16) {
+        Log.d(AUDIO_LOG_TAG, "Afspelen: ${format.displayLabel()} (codec_header ${if (format.codecHeader.isNullOrBlank()) "nee" else "ja"})")
+        val decoder = ChunkDecoder.create(format) ?: run {
             Log.w(TAG, "Niet-ondersteund formaat: $format")
             return null
         }
@@ -190,11 +210,17 @@ class SendspinAudioPlayer(
             .setBufferSizeInBytes(minSize * 4)
             .build()
         t.play()
-        return Output(t, format.sampleRate, format.channels)
+        return Output(t, decoder, format.sampleRate, format.channels)
     }
 
-    private class Output(val track: AudioTrack, val sampleRate: Int, val channels: Int) {
+    private class Output(
+        val track: AudioTrack,
+        val decoder: ChunkDecoder,
+        val sampleRate: Int,
+        val channels: Int
+    ) {
         val corrector = PcmDriftCorrector(channels)
+        val stats = PlaybackStats()
         var framesWritten = 0L
         private val ts = AudioTimestamp()
 
@@ -211,12 +237,6 @@ class SendspinAudioPlayer(
                 if (t >= now) return t
             }
             return now + queuedMicros() + START_LATENCY_MICROS
-        }
-
-        fun toShorts(data: ByteArray): ShortArray {
-            val shorts = ShortArray(data.size / 2)
-            ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts)
-            return shorts
         }
 
         fun write(pcm: ShortArray) {
@@ -236,6 +256,52 @@ class SendspinAudioPlayer(
                 track.release()
             } catch (_: Exception) {
             }
+            decoder.release()
+        }
+    }
+
+    /** Elke 5 s één logregel over hoe het afspelen loopt (alleen debug-builds). */
+    private class PlaybackStats {
+        var dropped = 0
+        var silenceMicros = 0L
+        private var chunks = 0
+        private var empty = 0
+        private var decodeMaxMicros = 0L
+        private var decodeTotalMicros = 0L
+        private var driftMin = Long.MAX_VALUE
+        private var driftMax = Long.MIN_VALUE
+        private var lastLog = System.nanoTime()
+        private var lastUnderruns = 0
+
+        fun decoded(micros: Long, wasEmpty: Boolean) {
+            chunks++
+            if (wasEmpty) empty++
+            decodeTotalMicros += micros
+            if (micros > decodeMaxMicros) decodeMaxMicros = micros
+        }
+
+        fun drift(micros: Long) {
+            if (micros < driftMin) driftMin = micros
+            if (micros > driftMax) driftMax = micros
+        }
+
+        fun maybeLog(o: Output) {
+            if (!BuildConfig.DEBUG) return
+            val nowNs = System.nanoTime()
+            if (nowNs - lastLog < 5_000_000_000L) return
+            lastLog = nowNs
+            val underruns = runCatching { o.track.underrunCount }.getOrDefault(0)
+            Log.d(
+                AUDIO_LOG_TAG,
+                "stats 5s: chunks=$chunks leeg=$empty gedropt=$dropped stilte=${silenceMicros / 1000}ms " +
+                    "decode gem=${if (chunks > 0) decodeTotalMicros / chunks / 1000.0 else 0.0}ms max=${decodeMaxMicros / 1000}ms " +
+                    "drift=${if (driftMin == Long.MAX_VALUE) "-" else "${driftMin / 1000}..${driftMax / 1000}ms"} " +
+                    "track-onderloop=+${underruns - lastUnderruns} wachtrij=${o.queuedMicros() / 1000}ms"
+            )
+            lastUnderruns = underruns
+            dropped = 0; silenceMicros = 0; chunks = 0; empty = 0
+            decodeMaxMicros = 0; decodeTotalMicros = 0
+            driftMin = Long.MAX_VALUE; driftMax = Long.MIN_VALUE
         }
     }
 

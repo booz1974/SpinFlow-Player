@@ -116,6 +116,8 @@ class SendspinPlaybackService : MediaLibraryService() {
     private var authClient: SendspinAuthClient? = null
     private var audioPlayer: SendspinAudioPlayer? = null
     private var settings: SendspinSettings? = null
+    /** Gekozen audiokwaliteit; bepaalt de volgorde van supported_formats in de client/hello. */
+    private var audioQuality = SendspinAudioQuality.ORIGINAL
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
@@ -184,7 +186,9 @@ class SendspinPlaybackService : MediaLibraryService() {
         scope.launch {
             val s = SettingsStore(applicationContext).loadSendspin()
             settings = s
+            audioQuality = s.audioQuality
             start(s)
+            SettingsStore(applicationContext).sendspinAudioQuality().collect(::onAudioQualityChanged)
         }
         scope.launch {
             SettingsStore(applicationContext).serverChanges().drop(1).collect { onServerChanged() }
@@ -217,6 +221,7 @@ class SendspinPlaybackService : MediaLibraryService() {
         session.release()
         sessionPlayer.release()
         publish(PhonePlayerStatus())
+        _streamFormat.value = null
         super.onDestroy()
     }
 
@@ -241,16 +246,13 @@ class SendspinPlaybackService : MediaLibraryService() {
      * Bouwt de Sendspin-client. Op mobiel netwerk vragen we MA om een ruimere buffer
      * (meer audio vooruit), zodat korte haperingen in de auto niet hoorbaar worden.
      */
-    private fun newClient(settings: SendspinSettings, mobile: Boolean): SendSpinClient {
+    private fun newClient(settings: SendspinSettings, mobile: Boolean, quality: SendspinAudioQuality): SendSpinClient {
         val moshi = Moshi.Builder()
             .add(JsonOptionalAdapterFactory())
             .addLast(KotlinJsonAdapterFactory())
             .build()
         val base = ClientPreferences(
-            supportedFormats = listOf(
-                AudioFormat(codec = "pcm", channels = 2, sampleRate = 48_000, bitDepth = 16),
-                AudioFormat(codec = "pcm", channels = 2, sampleRate = 44_100, bitDepth = 16)
-            ),
+            supportedFormats = advertisedFormats(quality),
             artworkChannels = listOf(ArtworkChannel(source = "album", mediaWidth = 600, mediaHeight = 600)),
             supportedOptionalRoles = setOf(
                 OptionalRole.PLAYER, OptionalRole.METADATA, OptionalRole.ARTWORK, OptionalRole.CONTROLLER
@@ -280,6 +282,50 @@ class SendspinPlaybackService : MediaLibraryService() {
         return c
     }
 
+    /**
+     * Alle formaten die we kunnen afspelen, in voorkeursvolgorde: de gekozen codec bovenaan,
+     * PCM altijd als terugval. Opus bestaat alleen op 48 kHz.
+     */
+    private fun advertisedFormats(quality: SendspinAudioQuality): List<AudioFormat> {
+        val formats = quality.codecPreference
+            .filter { ChunkDecoder.isSupported(it) }
+            .flatMap { codec ->
+                val rates = if (codec == "opus") listOf(48_000) else listOf(48_000, 44_100)
+                rates.map { AudioFormat(codec = codec, channels = 2, sampleRate = it, bitDepth = 16) }
+            }
+        Log.d(
+            AUDIO_LOG_TAG,
+            "client/hello: kwaliteit=${quality.name}, supported_formats=" +
+                formats.joinToString { "${it.codec}/${it.sampleRate}/${it.bitDepth}" }
+        )
+        return formats
+    }
+
+    /**
+     * Audiokwaliteit gewijzigd. Speelt er iets, dan vragen we de server met stream/request-format
+     * om een ander formaat (de server stuurt dan een nieuwe stream/start, zonder te stoppen).
+     * Zonder stream verbinden we opnieuw, zodat de nieuwe voorkeur in de client/hello staat.
+     */
+    private fun onAudioQualityChanged(quality: SendspinAudioQuality) {
+        if (quality == audioQuality) return
+        Log.d(AUDIO_LOG_TAG, "Audiokwaliteit: ${audioQuality.name} → ${quality.name}")
+        audioQuality = quality
+        val c = client ?: return
+        val current = c.streamFormat.value
+        if (current != null) {
+            val rate = when {
+                quality.codec == "opus" -> 48_000
+                current.sampleRate == 44_100 -> 44_100
+                else -> 48_000
+            }
+            Log.d(AUDIO_LOG_TAG, "stream/request-format → codec=${quality.codec} rate=$rate (nu ${current.displayLabel()})")
+            c.requestPlayerFormat(quality.codec, 2, rate, 16)
+        } else if (c.state.value == ClientState.CLOCK_SYNCING || c.state.value == ClientState.STREAMING) {
+            Log.d(AUDIO_LOG_TAG, "Geen actieve stream: opnieuw verbinden met nieuwe client/hello")
+            c.disconnect("audio-quality")
+        }
+    }
+
     private fun applyMobileBuffer(c: SendSpinClient, mobile: Boolean) {
         c.setRequiredLeadTimeMs(if (mobile) MOBILE_BUFFER_MS else 0)
         c.setMinBufferMs(if (mobile) MOBILE_BUFFER_MS else 0)
@@ -298,14 +344,17 @@ class SendspinPlaybackService : MediaLibraryService() {
         val lost = setOf(ClientState.ERROR, ClientState.DISCONNECTED)
         var c: SendSpinClient? = null
         var clientMobile = false
+        var clientQuality = audioQuality
         var attempt = 0
         var failedRounds = 0
         while (isActive) {
             val mobile = isOnMobileNetwork()
-            if (c == null || mobile != clientMobile) {
+            // Ander netwerktype of andere audiokwaliteit: nieuwe client (de hello gaat alleen bij verbinden mee)
+            if (c == null || mobile != clientMobile || audioQuality != clientQuality) {
                 c?.disconnect("network")
                 audioPlayer?.stop()
-                c = newClient(settings, mobile)
+                clientQuality = audioQuality
+                c = newClient(settings, mobile, clientQuality)
                 clientMobile = mobile
             }
             val url = urls[attempt % urls.size]
@@ -360,6 +409,19 @@ class SendspinPlaybackService : MediaLibraryService() {
         }
         launch {
             c.albumArtwork.collect { sessionPlayer.update(artwork = it) }
+        }
+        launch {
+            // Wat de server echt stuurt (uit stream/start), voor het label in de speler-UI
+            c.streamFormat.collect { format ->
+                if (format != null) {
+                    Log.d(
+                        AUDIO_LOG_TAG,
+                        "stream/start: ${format.displayLabel()} (gevraagd: ${audioQuality.codec}, " +
+                            "codec_header ${if (format.codecHeader.isNullOrBlank()) "nee" else "ja"})"
+                    )
+                }
+                _streamFormat.value = format?.displayLabel()
+            }
         }
         launch {
             combine(c.groupPlaybackState, c.streamFormat) { group, format -> group to format }
@@ -932,6 +994,10 @@ class SendspinPlaybackService : MediaLibraryService() {
         private fun publish(status: PhonePlayerStatus) {
             _status.value = status
         }
+
+        private val _streamFormat = MutableStateFlow<String?>(null)
+        /** Formaat dat de server nu naar deze telefoon stuurt, bv. "FLAC · 48 kHz · 16-bit"; null zonder stream. */
+        val streamFormat: StateFlow<String?> = _streamFormat.asStateFlow()
 
         fun start(context: Context) {
             try {

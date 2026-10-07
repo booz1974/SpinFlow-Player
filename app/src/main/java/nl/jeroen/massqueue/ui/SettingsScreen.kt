@@ -33,6 +33,7 @@ import nl.jeroen.massqueue.DEFAULT_SENDSPIN_LOCAL_URL
 import nl.jeroen.massqueue.MassLocation
 import nl.jeroen.massqueue.MassPlayer
 import nl.jeroen.massqueue.PhonePlayerStatus
+import nl.jeroen.massqueue.SendspinAudioQuality
 import nl.jeroen.massqueue.ui.theme.AppTheme
 import nl.jeroen.massqueue.ui.theme.colorSchemeFor
 
@@ -76,6 +77,8 @@ fun SettingsScreen(
     phonePlayerStatus: PhonePlayerStatus = PhonePlayerStatus(),
     onTogglePhonePlayer: ((Boolean) -> Unit)? = null,
     onSavePhonePlayer: ((name: String, localUrl: String) -> Unit)? = null,
+    phonePlayerAudioQuality: SendspinAudioQuality = SendspinAudioQuality.ORIGINAL,
+    onSelectPhonePlayerAudioQuality: ((SendspinAudioQuality) -> Unit)? = null,
     onClose: (() -> Unit)? = null
 ) {
     var url by remember(initialUrl) { mutableStateOf(initialUrl) }
@@ -317,6 +320,63 @@ fun SettingsScreen(
                                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
                                 Text("Toepassen", fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+
+                        // Audiokwaliteit: geldt meteen, ook tijdens het afspelen
+                        Spacer(Modifier.height(12.dp))
+                        var qualityMenuOpen by remember { mutableStateOf(false) }
+                        Box {
+                            OutlinedTextField(
+                                value = phonePlayerAudioQuality.label,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Audiokwaliteit") },
+                                supportingText = { Text(phonePlayerAudioQuality.description) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                leadingIcon = { Icon(Icons.Outlined.GraphicEq, contentDescription = null) },
+                                trailingIcon = {
+                                    Icon(
+                                        if (qualityMenuOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                        contentDescription = null
+                                    )
+                                },
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            // Leesveld vangt geen klikken: doorzichtige laag eroverheen (zonder de hulptekst)
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .padding(bottom = 22.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { qualityMenuOpen = true }
+                            )
+                            DropdownMenu(
+                                expanded = qualityMenuOpen,
+                                onDismissRequest = { qualityMenuOpen = false }
+                            ) {
+                                SendspinAudioQuality.entries.forEach { q ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(q.label, fontWeight = if (q == phonePlayerAudioQuality) FontWeight.Bold else FontWeight.Normal)
+                                                Text(
+                                                    q.description,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        },
+                                        leadingIcon = {
+                                            if (q == phonePlayerAudioQuality) Icon(Icons.Default.Check, contentDescription = null)
+                                        },
+                                        onClick = {
+                                            qualityMenuOpen = false
+                                            if (q != phonePlayerAudioQuality) onSelectPhonePlayerAudioQuality?.invoke(q)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

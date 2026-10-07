@@ -78,6 +78,7 @@ import kotlin.random.Random
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 import nl.jeroen.massqueue.MassPlayer
+import nl.jeroen.massqueue.SendspinPlaybackService
 import nl.jeroen.massqueue.effectiveVolume
 import nl.jeroen.massqueue.isPoweredOff
 import nl.jeroen.massqueue.GROUP_VOLUME_STEP
@@ -241,6 +242,7 @@ fun PlayerScreen(
     showCompactHeader: Boolean = false
 ) {
     val state by viewModel.uiState.collectAsState()
+    val phoneStreamFormat by SendspinPlaybackService.streamFormat.collectAsState()
     val activePlaylistName = state.activePlaylistName
     var trackForOptions by remember { mutableStateOf<QueueTrack?>(null) }
     var showFavorites by remember { mutableStateOf(false) }
@@ -699,7 +701,12 @@ fun PlayerScreen(
                                 crossfadeEnabled = queue.crossfadeEnabled,
                                 autoplayEnabled = queue.autoplayEnabled,
                                 onToggleCrossfade = { viewModel.toggleCrossfade() },
-                                onToggleAutoplay = { viewModel.toggleAutoplay() }
+                                onToggleAutoplay = { viewModel.toggleAutoplay() },
+                                // Alleen als deze telefoon de gekozen speler is
+                                streamFormatLabel = phoneStreamFormat?.takeIf {
+                                    state.players.firstOrNull { p -> p.id == state.selectedPlayerId }
+                                        ?.let { p -> state.isOwnPlayer(p) } == true
+                                }
                             )
                             Spacer(Modifier.height(8.dp))
                             TransportRow(
@@ -2039,7 +2046,8 @@ private fun NowPlayingHero(
     crossfadeEnabled: Boolean,
     autoplayEnabled: Boolean,
     onToggleCrossfade: () -> Unit,
-    onToggleAutoplay: () -> Unit
+    onToggleAutoplay: () -> Unit,
+    streamFormatLabel: String? = null
 ) {
     val songArt = track?.streamImage?.takeIf { it.isNotBlank() }
     val stationArt = track?.imagePath?.takeIf { it.isNotBlank() }
@@ -2185,6 +2193,17 @@ private fun NowPlayingHero(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+
+                    // Formaat dat de server echt naar deze telefoon stuurt (Sendspin)
+                    if (streamFormatLabel != null) {
+                        Text(
+                            streamFormatLabel,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                            maxLines = 1
+                        )
+                    }
 
                     // Artiest/album links, rechtsonder de wachtrij-schakelaars van MA.
                     Row(

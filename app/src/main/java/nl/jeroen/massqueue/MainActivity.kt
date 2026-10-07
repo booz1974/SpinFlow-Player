@@ -321,6 +321,12 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     },
+                                    phonePlayerAudioQuality = sendspin?.audioQuality ?: SendspinAudioQuality.ORIGINAL,
+                                    onSelectPhonePlayerAudioQuality = { q ->
+                                        sendspin = sendspin?.copy(audioQuality = q)
+                                        // De service pikt de wijziging zelf op (ook tijdens afspelen)
+                                        scope.launch { settingsStore.saveSendspinAudioQuality(q) }
+                                    },
                                     onClose = if (loadedUrl?.isNotBlank() == true) { { showSettings = false } } else null
                                 )
                             }

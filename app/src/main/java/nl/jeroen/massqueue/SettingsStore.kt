@@ -40,6 +40,7 @@ private val KEY_SENDSPIN_CLIENT_ID = stringPreferencesKey("sendspin_client_id")
 private val KEY_SENDSPIN_CLIENT_NAME = stringPreferencesKey("sendspin_client_name")
 private val KEY_SENDSPIN_ENABLED = booleanPreferencesKey("sendspin_enabled")
 private val KEY_SENDSPIN_LOCAL_URL = stringPreferencesKey("sendspin_local_url")
+private val KEY_SENDSPIN_AUDIO_QUALITY = stringPreferencesKey("sendspin_audio_quality")
 
 /** Vroegere vaste standaardnaam; wie die nog opgeslagen heeft, krijgt voortaan de naam met toestelmodel. */
 private const val LEGACY_SENDSPIN_CLIENT_NAME = "Spinflow telefoon"
@@ -64,7 +65,9 @@ data class SendspinSettings(
     /** Afgeleid van het server-adres (Tailscale): https://host → wss://host/sendspin. */
     val externalUrl: String?,
     /** API-token van de server; MA's /sendspin-proxy eist het als eerste bericht. */
-    val token: String
+    val token: String,
+    /** Gewenste codec voor de stream naar de telefoon. */
+    val audioQuality: SendspinAudioQuality = SendspinAudioQuality.ORIGINAL
 )
 
 /** https://host.ts.net → wss://host.ts.net/sendspin; http → ws. Leeg adres → null. */
@@ -376,8 +379,21 @@ class SettingsStore(private val context: Context) {
             externalUrl = sendspinUrlFromServerUrl(prefs[KEY_URL].orEmpty()),
             token = prefs[KEY_TOKEN].orEmpty().let { stored ->
                 if (TokenCipher.isEncrypted(stored)) TokenCipher.decrypt(stored).orEmpty() else stored
-            }
+            },
+            audioQuality = SendspinAudioQuality.fromKey(prefs[KEY_SENDSPIN_AUDIO_QUALITY])
         )
+    }
+
+    /** Huidige audiokwaliteit, en daarna elke wijziging. */
+    fun sendspinAudioQuality(): Flow<SendspinAudioQuality> =
+        context.dataStore.data
+            .map { SendspinAudioQuality.fromKey(it[KEY_SENDSPIN_AUDIO_QUALITY]) }
+            .distinctUntilChanged()
+
+    suspend fun saveSendspinAudioQuality(quality: SendspinAudioQuality) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SENDSPIN_AUDIO_QUALITY] = quality.name
+        }
     }
 
     suspend fun saveSendspinEnabled(enabled: Boolean) {
