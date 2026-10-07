@@ -51,7 +51,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            if (releaseStoreFile != null) signingConfig = signingConfigs.getByName("release")
+            // -Punsigned: release zonder ondertekening (bv. een ongesigneerde APK)
+            if (releaseStoreFile != null && !project.hasProperty("unsigned")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
