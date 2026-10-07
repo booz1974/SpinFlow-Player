@@ -13,8 +13,8 @@ import com.sendspin.protocol.PcmDriftCorrector
 import com.sendspin.protocol.StreamFormat
 
 /**
- * Speelt de Sendspin-stream af via een [AudioTrack]. PCM gaat er direct in; FLAC en Opus
- * worden per chunk eerst door een [ChunkDecoder] (MediaCodec) naar PCM omgezet.
+ * Speelt de Sendspin-stream af via een [AudioTrack]. PCM gaat er direct in; FLAC
+ * wordt per chunk eerst door een [ChunkDecoder] (MediaCodec) naar PCM omgezet.
  *
  * De bibliotheek zet binnenkomende chunks op servertijd in de [AudioBuffer]; deze speler
  * haalt ze eruit op het moment dat ze (na alles wat al in de AudioTrack zit) precies op

@@ -2195,14 +2195,21 @@ private fun NowPlayingHero(
                     )
 
                     // Formaat dat de server echt naar deze telefoon stuurt (Sendspin)
+                    // in hetzelfde kadertje als het jaartal
                     if (streamFormatLabel != null) {
-                        Text(
-                            streamFormatLabel,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
-                            maxLines = 1
-                        )
+                        Spacer(Modifier.height(2.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                streamFormatLabel,
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                            )
+                        }
                     }
 
                     // Artiest/album links, rechtsonder de wachtrij-schakelaars van MA.

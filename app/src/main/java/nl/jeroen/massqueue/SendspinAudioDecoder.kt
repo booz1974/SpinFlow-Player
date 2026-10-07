@@ -15,26 +15,25 @@ const val AUDIO_LOG_TAG = "SpinflowAudio"
 /** Instelling "Audiokwaliteit" voor de eigen Sendspin-speler. */
 enum class SendspinAudioQuality(val codec: String, val label: String, val description: String) {
     LOSSLESS("flac", "Lossless (FLAC)", "Zelfde geluid als PCM, ongeveer de helft van de data"),
-    ORIGINAL("pcm", "Origineel (PCM)", "Onbewerkte audio, meeste data (standaard)"),
-    DATA_SAVER("opus", "Databesparend (Opus)", "Kleinste stream, licht gecomprimeerd");
+    ORIGINAL("pcm", "Origineel (PCM)", "Onbewerkte audio, meeste data (standaard)");
 
     /** Voorkeursvolgorde van codecs: de gekozen eerst, PCM altijd erin als terugval. */
     val codecPreference: List<String>
         get() = when (this) {
-            LOSSLESS -> listOf("flac", "pcm", "opus")
-            ORIGINAL -> listOf("pcm", "flac", "opus")
-            DATA_SAVER -> listOf("opus", "flac", "pcm")
+            LOSSLESS -> listOf("flac", "pcm")
+            ORIGINAL -> listOf("pcm", "flac")
         }
 
     companion object {
+        /** Onbekende sleutel (ook het vervallen DATA_SAVER/Opus) → PCM. */
         fun fromKey(key: String?): SendspinAudioQuality = entries.firstOrNull { it.name == key } ?: ORIGINAL
     }
 }
 
-/** Korte omschrijving voor de UI, bv. "FLAC · 48 kHz · 16-bit". */
+/** Korte omschrijving voor de UI: codec, kHz/bitdiepte, bv. "PCM 48/16" of "FLAC 44.1/16". */
 fun StreamFormat.displayLabel(): String {
-    val khz = if (sampleRate % 1000 == 0) "${sampleRate / 1000}" else "%.1f".format(sampleRate / 1000.0)
-    return "${codec.uppercase()} · $khz kHz · $bitDepth-bit"
+    val khz = if (sampleRate % 1000 == 0) "${sampleRate / 1000}" else "%.1f".format(java.util.Locale.ROOT, sampleRate / 1000.0)
+    return "${codec.uppercase()} $khz/$bitDepth"
 }
 
 /** Gedecodeerde PCM (16 bit, interleaved) met de servertijd van het eerste frame. */
@@ -67,7 +66,7 @@ interface ChunkDecoder {
             }
             return when (codec) {
                 "pcm" -> PcmDecoder.also { Log.d(AUDIO_LOG_TAG, "Decoder: PCM (direct) voor ${format.displayLabel()}") }
-                "flac", "opus" -> MediaCodecChunkDecoder.create(format)
+                "flac" -> MediaCodecChunkDecoder.create(format)
                 else -> {
                     Log.w(AUDIO_LOG_TAG, "Onbekende codec: $format")
                     null
@@ -77,7 +76,6 @@ interface ChunkDecoder {
 
         private fun mimeFor(codec: String): String? = when (codec.lowercase()) {
             "flac" -> MediaFormat.MIMETYPE_AUDIO_FLAC
-            "opus" -> MediaFormat.MIMETYPE_AUDIO_OPUS
             else -> null
         }
     }
@@ -93,7 +91,7 @@ private object PcmDecoder : ChunkDecoder {
 }
 
 /**
- * Synchrone MediaCodec-decoder voor FLAC en Opus. Elke chunk is één gecodeerd frame; de
+ * Synchrone MediaCodec-decoder voor FLAC. Elke chunk is één gecodeerd frame; de
  * servertijd gaat als presentationTimeUs mee, zodat de uitvoer zijn eigen tijdstempel houdt
  * en de bestaande planning/drift-correctie gewoon blijft werken.
  */
@@ -151,7 +149,7 @@ private class MediaCodecChunkDecoder(
 
     /**
      * Haalt alle beschikbare uitvoer op. Alleen als er nog niets is, wachten we kort: sommige
-     * decoders (Opus) geven de uitvoer pas een pakket later. Die uitvoer houdt zijn eigen pts,
+     * decoders geven de uitvoer pas een pakket later. Die uitvoer houdt zijn eigen pts,
      * dus wachten tot "onze" chunk klaar is zou elke chunk vertragen (onderloop → ruis).
      */
     private fun drain(serverMicros: Long): DecodedBlock? {
@@ -207,29 +205,17 @@ private class MediaCodecChunkDecoder(
         private const val OUTPUT_POLL_US = 2_000L
         /** Langer wachten op uitvoer heeft geen zin: dan schuift die door naar de volgende chunk. */
         private const val OUTPUT_WAIT_NS = 20_000_000L
-        /** Opus: standaard pre-skip van libopus op 48 kHz, en 80 ms seek-preroll. */
-        private const val OPUS_PRE_SKIP = 312
-        private const val OPUS_SEEK_PREROLL_NS = 80_000_000L
 
         fun create(format: StreamFormat): ChunkDecoder? {
             val codecName = format.codec.lowercase()
-            val mime = if (codecName == "flac") MediaFormat.MIMETYPE_AUDIO_FLAC else MediaFormat.MIMETYPE_AUDIO_OPUS
+            val mime = MediaFormat.MIMETYPE_AUDIO_FLAC
             val header = format.codecHeader?.takeIf { it.isNotBlank() }?.let {
                 runCatching { Base64.decode(it, Base64.DEFAULT) }
                     .onFailure { e -> Log.w(AUDIO_LOG_TAG, "codec_header niet te decoderen", e) }
                     .getOrNull()
             }
             val mf = MediaFormat.createAudioFormat(mime, format.sampleRate, format.channels)
-            if (codecName == "flac") {
-                val csd = flacCsd(header, format)
-                mf.setByteBuffer("csd-0", ByteBuffer.wrap(csd))
-            } else {
-                val head = header?.takeIf { it.startsWithAscii("OpusHead") } ?: opusHead(format.channels, format.sampleRate)
-                val preSkip = (head[10].toInt() and 0xFF) or ((head[11].toInt() and 0xFF) shl 8)
-                mf.setByteBuffer("csd-0", ByteBuffer.wrap(head))
-                mf.setByteBuffer("csd-1", nativeLong(preSkip * 1_000_000_000L / 48_000))
-                mf.setByteBuffer("csd-2", nativeLong(OPUS_SEEK_PREROLL_NS))
-            }
+            mf.setByteBuffer("csd-0", ByteBuffer.wrap(flacCsd(header, format)))
             val source = when {
                 header == null -> "zelf opgebouwd (geen codec_header)"
                 else -> "codec_header van server (${header.size} bytes)"
@@ -274,22 +260,6 @@ private class MediaCodecChunkDecoder(
             b.put(ByteArray(16))           // MD5 onbekend
             return b.array()
         }
-
-        /** OpusHead (RFC 7845) voor 1 of 2 kanalen. */
-        private fun opusHead(channels: Int, sampleRate: Int): ByteArray {
-            val b = ByteBuffer.allocate(19).order(ByteOrder.LITTLE_ENDIAN)
-            b.put("OpusHead".toByteArray())
-            b.put(1)                         // versie
-            b.put(channels.toByte())
-            b.putShort(OPUS_PRE_SKIP.toShort())
-            b.putInt(sampleRate)             // oorspronkelijke samplerate (informatief)
-            b.putShort(0)                    // output gain
-            b.put(0)                         // channel mapping family 0
-            return b.array()
-        }
-
-        private fun nativeLong(value: Long): ByteBuffer =
-            ByteBuffer.allocate(8).order(ByteOrder.nativeOrder()).putLong(value).apply { flip() }
 
         private fun ByteArray.hexHead(): String =
             take(16).joinToString(" ") { "%02x".format(it) }

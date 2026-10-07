@@ -284,13 +284,13 @@ class SendspinPlaybackService : MediaLibraryService() {
 
     /**
      * Alle formaten die we kunnen afspelen, in voorkeursvolgorde: de gekozen codec bovenaan,
-     * PCM altijd als terugval. Opus bestaat alleen op 48 kHz.
+     * PCM altijd als terugval.
      */
     private fun advertisedFormats(quality: SendspinAudioQuality): List<AudioFormat> {
         val formats = quality.codecPreference
             .filter { ChunkDecoder.isSupported(it) }
             .flatMap { codec ->
-                val rates = if (codec == "opus") listOf(48_000) else listOf(48_000, 44_100)
+                val rates = listOf(48_000, 44_100)
                 rates.map { AudioFormat(codec = codec, channels = 2, sampleRate = it, bitDepth = 16) }
             }
         Log.d(
@@ -314,7 +314,6 @@ class SendspinPlaybackService : MediaLibraryService() {
         val current = c.streamFormat.value
         if (current != null) {
             val rate = when {
-                quality.codec == "opus" -> 48_000
                 current.sampleRate == 44_100 -> 44_100
                 else -> 48_000
             }
