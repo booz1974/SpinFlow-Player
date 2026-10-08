@@ -18,6 +18,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -2035,6 +2036,7 @@ private fun MassImage(
 /**
  * Large display for the currently playing track, including progress bar.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NowPlayingHero(
     track: QueueTrack?,
@@ -2160,6 +2162,8 @@ private fun NowPlayingHero(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        // Lange playlistnaam loopt (marquee) tot aan het jaartal
+                        // in plaats van het jaartal weg te drukken.
                         Text(
                             text = displayLabel,
                             style = MaterialTheme.typography.labelSmall,
@@ -2167,9 +2171,12 @@ private fun NowPlayingHero(
                             color = if (isAiRadio) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .basicMarquee(iterations = Int.MAX_VALUE)
                         )
                         if (displayYear != null) {
+                            Spacer(Modifier.width(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f)
@@ -2204,10 +2211,10 @@ private fun NowPlayingHero(
                         ) {
                             Text(
                                 streamFormatLabel,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 maxLines = 1,
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
                             )
                         }
                     }
