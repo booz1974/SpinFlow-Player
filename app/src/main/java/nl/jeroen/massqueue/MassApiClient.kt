@@ -69,7 +69,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                 val text = resp.body?.string()?.trim() ?: "{}"
                 
                 if (!resp.isSuccessful) {
-                    throw MassApiException("Server fout $code: $text")
+                    throw MassApiException(tr("Server fout $code: $text", "Server error $code: $text"))
                 }
                 
                 return@withContext when {
@@ -111,7 +111,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
             client.newCall(requestBuilder.build()).execute().use { resp ->
                 val text = resp.body?.string()?.trim() ?: "[]"
                 if (!resp.isSuccessful) {
-                    throw MassApiException("HA Service fout ${resp.code}: $text")
+                    throw MassApiException(tr("HA Service fout ${resp.code}: $text", "HA service error ${resp.code}: $text"))
                 }
                 // HA geeft meestal een lijst van state-changes terug
                 return@withContext if (text.startsWith("[")) {
@@ -662,7 +662,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         val result = call("music/playlists/create_playlist", JSONObject().put("name", name))
         val obj = result.optJSONObject("result") ?: result
         val uri = obj.optString("uri").takeIf { it.isNotBlank() }
-            ?: throw MassApiException("Kon playlist niet aanmaken.")
+            ?: throw MassApiException(tr("Kon playlist niet aanmaken.", "Could not create playlist."))
         return MassPlaylist(
             uri = uri,
             name = obj.optString("name", name),
@@ -993,7 +993,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
     }
 
     suspend fun moveItemNext(playerId: String, item: QueueTrack, currentIndex: Int) {
-        val queueItemId = item.queueItemId ?: throw MassApiException("Geen item-id gevonden voor deze track.")
+        val queueItemId = item.queueItemId ?: throw MassApiException(tr("Geen item-id gevonden voor deze track.", "No item ID found for this track."))
         val targetIndex = currentIndex + 1
         val posShift = targetIndex - item.absoluteIndex
         if (posShift == 0) return
@@ -1006,7 +1006,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
     /** Verschuift een wachtrij-item [posShift] plaatsen (negatief = naar voren). */
     suspend fun moveQueueItem(playerId: String, item: QueueTrack, posShift: Int) {
         if (posShift == 0) return
-        val queueItemId = item.queueItemId ?: throw MassApiException("Geen item-id gevonden voor deze track.")
+        val queueItemId = item.queueItemId ?: throw MassApiException(tr("Geen item-id gevonden voor deze track.", "No item ID found for this track."))
         call(
             "player_queues/move_item",
             JSONObject().put("queue_id", playerId).put("queue_item_id", queueItemId).put("pos_shift", posShift)
@@ -1092,13 +1092,19 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         val msg = chosen?.message.orEmpty()
         if (msg.contains("scope", ignoreCase = true) || msg.contains(" 403")) {
             throw MassApiException(
-                "Je API-token heeft geen toegang tot AI Radio. " +
-                "Maak in Music Assistant een long-lived token aan vanuit een admin-account " +
-                "(scopes config.providers.read + config.providers.write) en zet dat in Instellingen. " +
-                "Serverdetail: $msg"
+                tr(
+                    "Je API-token heeft geen toegang tot AI Radio. " +
+                        "Maak in Music Assistant een long-lived token aan vanuit een admin-account " +
+                        "(scopes config.providers.read + config.providers.write) en zet dat in Instellingen. " +
+                        "Serverdetail: $msg",
+                    "Your API token has no access to AI Radio. " +
+                        "Create a long-lived token in Music Assistant from an admin account " +
+                        "(scopes config.providers.read + config.providers.write) and enter it in Settings. " +
+                        "Server detail: $msg"
+                )
             )
         }
-        throw chosen ?: MassApiException("Geen AI Radio-commando beschikbaar: $variants")
+        throw chosen ?: MassApiException(tr("Geen AI Radio-commando beschikbaar: $variants", "No AI Radio command available: $variants"))
     }
 
     /** Endpoints die deze MA-server niet kent, onthouden we zodat we ze niet elke poll opnieuw proberen. */
@@ -1219,7 +1225,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                 if (isInvalidCommand(e)) throw e // endpoint bestaat niet: verder proberen zinloos
             }
         }
-        throw last ?: MassApiException("save $suffix mislukt")
+        throw last ?: MassApiException(tr("save $suffix mislukt", "save $suffix failed"))
     }
 
     /** Delete: probeert bekende arg-vormen tot er één lukt ({id}, {<ding>_id}, genest). */
@@ -1235,7 +1241,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
             try { return callAiRadio(cmd(suffix), args) }
             catch (e: Exception) { last = e; if (isInvalidCommand(e)) throw e }
         }
-        throw last ?: MassApiException("delete $suffix mislukt")
+        throw last ?: MassApiException(tr("delete $suffix mislukt", "delete $suffix failed"))
     }
 
     // ---- Stations ------------------------------------------------------------
@@ -1257,7 +1263,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         val obj = resp.optJSONObject("result") ?: resp
         return AiRadioStation(
             id = "",
-            name = obj.optString("name", "Nieuw station"),
+            name = obj.optString("name", tr("Nieuw station", "New station")),
             sourcePlaylistId = obj.optString("source_playlist_id").takeIf { it.isNotBlank() },
             sourcePlaylistProvider = obj.optString("source_playlist_provider").takeIf { it.isNotBlank() },
             hostId = obj.optString("host_id").takeIf { it.isNotBlank() },

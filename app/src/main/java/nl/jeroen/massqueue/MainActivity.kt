@@ -274,6 +274,11 @@ class MainActivity : ComponentActivity() {
                                         selectedTheme = theme
                                         scope.launch { settingsStore.saveTheme(theme.name) }
                                     },
+                                    selectedLanguage = Lang.choice,
+                                    onSelectLanguage = { language ->
+                                        Lang.choice = language
+                                        scope.launch { settingsStore.saveLanguage(language) }
+                                    },
                                     showCompactHeader = showCompactHeader,
                                     onToggleCompactHeader = { compact ->
                                         showCompactHeader = compact

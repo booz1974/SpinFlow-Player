@@ -3,6 +3,7 @@ package nl.jeroen.massqueue
 import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
@@ -37,6 +38,12 @@ object ServerAuth {
 }
 
 class MassApp : Application(), ImageLoaderFactory {
+    override fun onCreate() {
+        super.onCreate()
+        // Taal vóór de eerste tekst (UI, meldingen, Android Auto) bekend maken
+        Lang.choice = runBlocking { SettingsStore(this@MassApp).loadLanguage() }
+    }
+
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
             .okHttpClient { OkHttpClient.Builder().addInterceptor(ServerAuth.interceptor).build() }

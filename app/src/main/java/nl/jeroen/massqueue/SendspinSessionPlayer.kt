@@ -66,7 +66,7 @@ class SendspinSessionPlayer(
     private var artwork: ByteArray? = null
     private var positionMs = 0L
     private var durationMs = 0L
-    private var idleText = "Wacht op muziek…"
+    private var idleText = tr("Wacht op muziek…", "Waiting for music…")
 
     private var queue: List<SessionQueueItem>? = null
     private var queueCurrent = -1

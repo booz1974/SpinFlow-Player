@@ -7,18 +7,21 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import nl.jeroen.massqueue.tr
 
-enum class AppTheme(val displayName: String, val description: String) {
-    ORIGINAL("Original", "Oorspronkelijke crème & lichtblauw stijl"),
-    CASSETTE("Cassette Futurism", "Warm crème, mosterdgeel & petrol teal"),
-    CYBERPUNK("Midnight Synthwave", "Elektrisch cyan, neon paars & hot pink"),
-    OCEAN("Deep Emerald", "Rijk emerald groen, goud & diepblauw"),
-    NORDIC("OLED Minimalist", "Puur OLED zwart & ijsblauw accent"),
-    SUNSET("Retro Sunset", "Warm oranje, koraal & diep aubergine"),
-    AMBER("Amber Terminal", "Fosfor-amber op zwart, als een oude CRT"),
-    MOCHA("Espresso Mocha", "Koffiebruin, karamel & zacht crème"),
-    LAVENDER("Lavendel Dream", "Licht lavendel, pruim & zachtroze"),
-    ROSE("Rosé Blush", "Lichte rosé, framboos & zacht goud")
+enum class AppTheme(val displayName: String, private val descriptionNl: String, private val descriptionEn: String) {
+    ORIGINAL("Original", "Oorspronkelijke crème & lichtblauw stijl", "Original cream & light blue style"),
+    CASSETTE("Cassette Futurism", "Warm crème, mosterdgeel & petrol teal", "Warm cream, mustard yellow & petrol teal"),
+    CYBERPUNK("Midnight Synthwave", "Elektrisch cyan, neon paars & hot pink", "Electric cyan, neon purple & hot pink"),
+    OCEAN("Deep Emerald", "Rijk emerald groen, goud & diepblauw", "Rich emerald green, gold & deep blue"),
+    NORDIC("OLED Minimalist", "Puur OLED zwart & ijsblauw accent", "Pure OLED black & ice blue accent"),
+    SUNSET("Retro Sunset", "Warm oranje, koraal & diep aubergine", "Warm orange, coral & deep aubergine"),
+    AMBER("Amber Terminal", "Fosfor-amber op zwart, als een oude CRT", "Phosphor amber on black, like an old CRT"),
+    MOCHA("Espresso Mocha", "Koffiebruin, karamel & zacht crème", "Coffee brown, caramel & soft cream"),
+    LAVENDER("Lavendel Dream", "Licht lavendel, pruim & zachtroze", "Light lavender, plum & soft pink"),
+    ROSE("Rosé Blush", "Lichte rosé, framboos & zacht goud", "Light rosé, raspberry & soft gold");
+
+    val description: String get() = tr(descriptionNl, descriptionEn)
 }
 
 // 0. Original Palette (Classic Cream & Light MA Blue Accent)

@@ -101,6 +101,8 @@ import nl.jeroen.massqueue.AiRadioStation
 import nl.jeroen.massqueue.AiRadioHost
 import nl.jeroen.massqueue.AiRadioSection
 import nl.jeroen.massqueue.AiRadioOptions
+import nl.jeroen.massqueue.Lang
+import nl.jeroen.massqueue.tr
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyColumnState
 
@@ -311,7 +313,7 @@ fun PlayerScreen(
                                 IconButton(onClick = onOpenSettings) {
                                     Icon(
                                         Icons.Filled.Settings,
-                                        contentDescription = "Instellingen",
+                                        contentDescription = tr("Instellingen", "Settings"),
                                         tint = MaterialTheme.colorScheme.onSurface
                                     )
                                 }
@@ -375,7 +377,7 @@ fun PlayerScreen(
                                 title = if (isPlaying && !activePlaylistName.isNullOrBlank()) {
                                     activePlaylistName
                                 } else {
-                                    "Nu spelend"
+                                    tr("Nu spelend", "Now playing")
                                 },
                                 modifier = Modifier
                                     .align(Alignment.TopCenter)
@@ -413,7 +415,7 @@ fun PlayerScreen(
                             ) {
                                 Icon(
                                     Icons.Filled.Settings,
-                                    contentDescription = "Instellingen",
+                                    contentDescription = tr("Instellingen", "Settings"),
                                     tint = Color(0xFFFAF3E0)
                                 )
                             }
@@ -438,7 +440,7 @@ fun PlayerScreen(
                     IconButton(onClick = { showSearch = true }) {
                         Icon(
                             Icons.Filled.Search,
-                            contentDescription = "Nummer zoeken",
+                            contentDescription = tr("Nummer zoeken", "Search music"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -446,7 +448,7 @@ fun PlayerScreen(
                     IconButton(onClick = { showTransfer = true }) {
                         Icon(
                             Icons.Filled.SwapHoriz,
-                            contentDescription = "Muziek verhuizen",
+                            contentDescription = tr("Muziek verhuizen", "Move music"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(26.dp)
                         )
@@ -459,7 +461,7 @@ fun PlayerScreen(
                     }) {
                         Icon(
                             Icons.Filled.AutoFixHigh,
-                            contentDescription = "Muziek Wizard",
+                            contentDescription = tr("Muziek Wizard", "Music wizard"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -507,7 +509,7 @@ fun PlayerScreen(
                     }) {
                         Icon(
                             Icons.Filled.Radio,
-                            contentDescription = "Favoriete radiozenders",
+                            contentDescription = tr("Favoriete radiozenders", "Favorite radio stations"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
                         )
@@ -519,7 +521,7 @@ fun PlayerScreen(
                     }) {
                         Icon(
                             Icons.Filled.Favorite,
-                            contentDescription = "Favoriete playlists",
+                            contentDescription = tr("Favoriete playlists", "Favorite playlists"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -527,7 +529,7 @@ fun PlayerScreen(
                     IconButton(onClick = { showSleepTimer = true }) {
                         Icon(
                             Icons.Filled.Bedtime,
-                            contentDescription = "Slaaptimer",
+                            contentDescription = tr("Slaaptimer", "Sleep timer"),
                             tint = if (state.sleepTimerEndsAtMs != null)
                                 MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant
@@ -565,7 +567,7 @@ fun PlayerScreen(
                             ) {
                                 Icon(
                                     Icons.Filled.Close,
-                                    contentDescription = "DJ stoppen",
+                                    contentDescription = tr("DJ stoppen", "Stop DJ"),
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.size(14.dp)
                                 )
@@ -597,7 +599,7 @@ fun PlayerScreen(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "Slaaptimer ${formatDuration(remainingSec)}",
+                            tr("Slaaptimer ${formatDuration(remainingSec)}", "Sleep timer ${formatDuration(remainingSec)}"),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             fontWeight = FontWeight.Bold
@@ -608,7 +610,7 @@ fun PlayerScreen(
                         ) {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "Slaaptimer annuleren",
+                                contentDescription = tr("Slaaptimer annuleren", "Cancel sleep timer"),
                                 tint = MaterialTheme.colorScheme.onTertiaryContainer,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -633,7 +635,7 @@ fun PlayerScreen(
                 if (queue == null || queue.items.isEmpty()) {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            if (state.isLoading) "Laden..." else "Geen actieve wachtrij voor deze speler.",
+                            if (state.isLoading) tr("Laden...", "Loading...") else tr("Geen actieve wachtrij voor deze speler.", "No active queue for this player."),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -670,7 +672,7 @@ fun PlayerScreen(
 
                     LazyColumn(state = queueListState, modifier = Modifier.weight(1f)) {
                         if (queue.pastItems.isNotEmpty()) {
-                            item { SectionLabel("Vorige") }
+                            item { SectionLabel(tr("Vorige", "Previous")) }
                             itemsIndexed(queue.pastItems) { index, track ->
                                 QueueRow(
                                     track,
@@ -737,7 +739,7 @@ fun PlayerScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    SectionLabel("Eerder op deze zender")
+                                    SectionLabel(tr("Eerder op deze zender", "Earlier on this station"))
                                     IconButton(
                                         onClick = { showSaveRadioHistory = true },
                                         enabled = !state.savingRadioHistoryPlaylist,
@@ -745,7 +747,7 @@ fun PlayerScreen(
                                     ) {
                                         Icon(
                                             Icons.AutoMirrored.Filled.PlaylistAdd,
-                                            contentDescription = "Opslaan als afspeellijst",
+                                            contentDescription = tr("Opslaan als afspeellijst", "Save as playlist"),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(18.dp)
                                         )
@@ -761,7 +763,7 @@ fun PlayerScreen(
                             }
                             item {
                                 Text(
-                                    "Tik op een nummer om het nu te horen; daarna gaat de radio verder.",
+                                    tr("Tik op een nummer om het nu te horen; daarna gaat de radio verder.", "Tap a track to hear it now; the radio continues afterwards."),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     modifier = Modifier.padding(horizontal = 2.dp, vertical = 6.dp)
@@ -771,7 +773,7 @@ fun PlayerScreen(
                         }
 
                         if (workingUpcoming.isNotEmpty()) {
-                            item { SectionLabel("Komt hierna") }
+                            item { SectionLabel(tr("Komt hierna", "Up next")) }
                             itemsIndexed(
                                 workingUpcoming,
                                 key = { _, t -> upcomingKey(t) }
@@ -789,7 +791,7 @@ fun PlayerScreen(
                                         dragHandle = {
                                             Icon(
                                                 Icons.Filled.DragHandle,
-                                                contentDescription = "Sleep om te verplaatsen",
+                                                contentDescription = tr("Sleep om te verplaatsen", "Drag to reorder"),
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier
                                                     .size(26.dp)
@@ -1099,18 +1101,21 @@ fun PlayerScreen(
     if (showLocationWarning && state.serverConfigured && !state.isNearLocation && state.players.isEmpty() && !state.isLoading) {
         AlertDialog(
             onDismissRequest = { showLocationWarning = false },
-            title = { Text("Niet in de buurt") },
+            title = { Text(tr("Niet in de buurt", "Not nearby")) },
             text = { 
                 val distanceText = state.distanceToHome?.let { 
-                    "\n\n(Huidige afstand: ${(it / 1000).asTwoDecimals()} km)"
+                    tr("\n\n(Huidige afstand: ${(it / 1000).asTwoDecimals()} km)", "\n\n(Current distance: ${(it / 1000).asTwoDecimals()} km)")
                 } ?: ""
-                Text("Je bent niet in de buurt van spelers en kunt daarom geen spelers bedienen. " +
-                     "Klik op het Music Assistant icoon in het menu om eerst een speler te openen en in te loggen met je gebruikersnaam." +
-                     distanceText)
+                Text(tr(
+                    "Je bent niet in de buurt van spelers en kunt daarom geen spelers bedienen. " +
+                        "Klik op het Music Assistant icoon in het menu om eerst een speler te openen en in te loggen met je gebruikersnaam.",
+                    "You're not near any players, so you can't control them. " +
+                        "Tap the Music Assistant icon in the menu to open a player first and log in with your username."
+                ) + distanceText)
             },
             confirmButton = {
                 TextButton(onClick = { showLocationWarning = false }) {
-                    Text("Begrepen")
+                    Text(tr("Begrepen", "Got it"))
                 }
             }
         )
@@ -1124,18 +1129,23 @@ fun PlayerScreen(
             ?: activePlaylistName?.takeIf { it.isNotBlank() }
             ?: "Radio")
         val dateLabel = remember {
-            java.text.SimpleDateFormat("d MMM HH:mm", java.util.Locale("nl")).format(java.util.Date())
+            java.text.SimpleDateFormat("d MMM HH:mm", Lang.locale).format(java.util.Date())
         }
         var playlistName by remember { mutableStateOf("$stationName – $dateLabel") }
         AlertDialog(
             onDismissRequest = { showSaveRadioHistory = false },
-            title = { Text("Opslaan als afspeellijst") },
+            title = { Text(tr("Opslaan als afspeellijst", "Save as playlist")) },
             text = {
                 Column {
                     Text(
-                        "Slaat \"Eerder op deze zender\" plus het nummer dat nu speelt " +
-                            "(${state.radioHistory.size + 1} nummers) op als nieuwe favoriete playlist " +
-                            "in Music Assistant.",
+                        tr(
+                            "Slaat \"Eerder op deze zender\" plus het nummer dat nu speelt " +
+                                "(${state.radioHistory.size + 1} nummers) op als nieuwe favoriete playlist " +
+                                "in Music Assistant.",
+                            "Saves \"Earlier on this station\" plus the track playing now " +
+                                "(${state.radioHistory.size + 1} tracks) as a new favorite playlist " +
+                                "in Music Assistant."
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1143,7 +1153,7 @@ fun PlayerScreen(
                     OutlinedTextField(
                         value = playlistName,
                         onValueChange = { playlistName = it },
-                        label = { Text("Naam") },
+                        label = { Text(tr("Naam", "Name")) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1157,12 +1167,12 @@ fun PlayerScreen(
                     },
                     enabled = playlistName.isNotBlank()
                 ) {
-                    Text("Opslaan")
+                    Text(tr("Opslaan", "Save"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showSaveRadioHistory = false }) {
-                    Text("Annuleren")
+                    Text(tr("Annuleren", "Cancel"))
                 }
             }
         )
@@ -1237,7 +1247,7 @@ private fun RadioHistoryRow(entry: RadioHistoryEntry, showDivider: Boolean, onCl
             Spacer(Modifier.width(8.dp))
             Icon(
                 Icons.Filled.PlayCircleOutline,
-                contentDescription = "Dit nummer nu afspelen",
+                contentDescription = tr("Dit nummer nu afspelen", "Play this track now"),
                 modifier = Modifier.size(22.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -1264,14 +1274,14 @@ private fun SleepTimerSheet(
                 Icon(Icons.Filled.Bedtime, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "SLAAPTIMER",
+                    tr("SLAAPTIMER", "SLEEP TIMER"),
                     style = MaterialTheme.typography.labelLarge,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 2.sp
                 )
             }
             Text(
-                "De muziek pauzeert automatisch na de gekozen tijd.",
+                tr("De muziek pauzeert automatisch na de gekozen tijd.", "The music pauses automatically after the chosen time."),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)
@@ -1279,14 +1289,14 @@ private fun SleepTimerSheet(
             Spacer(Modifier.height(8.dp))
             listOf(15, 30, 45, 60, 90).forEach { min ->
                 ListItem(
-                    headlineContent = { Text("$min minuten") },
+                    headlineContent = { Text(tr("$min minuten", "$min minutes")) },
                     leadingContent = { Icon(Icons.Filled.Timer, contentDescription = null) },
                     modifier = Modifier.clickable { onPick(min) }
                 )
             }
             if (activeEndsAtMs != null) {
                 ListItem(
-                    headlineContent = { Text("Slaaptimer uitzetten") },
+                    headlineContent = { Text(tr("Slaaptimer uitzetten", "Turn off sleep timer")) },
                     leadingContent = { Icon(Icons.Filled.Close, contentDescription = null) },
                     modifier = Modifier.clickable { onPick(null) }
                 )
@@ -1327,7 +1337,7 @@ private fun MemberVolumeSheet(
                 Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    if (group.isGroup) "VOLUME PER SPELER" else "VOLUME BEDIENING",
+                    if (group.isGroup) tr("VOLUME PER SPELER", "VOLUME PER PLAYER") else tr("VOLUME BEDIENING", "VOLUME CONTROL"),
                     style = MaterialTheme.typography.labelLarge,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 2.sp
@@ -1336,7 +1346,7 @@ private fun MemberVolumeSheet(
             Spacer(Modifier.height(8.dp))
             Text(
                 if (group.isGroup)
-                    "${playerAliases[group.id] ?: group.name} · groep ${groupVolume?.let { "$it%" } ?: "-"}"
+                    tr("${playerAliases[group.id] ?: group.name} · groep ${groupVolume?.let { "$it%" } ?: "-"}", "${playerAliases[group.id] ?: group.name} · group ${groupVolume?.let { "$it%" } ?: "-"}")
                 else
                     "${playerAliases[group.id] ?: group.name} · ${groupVolume?.let { "$it%" } ?: "-"}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -1357,7 +1367,7 @@ private fun MemberVolumeSheet(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { onSetVolume(member.id, level - GROUP_VOLUME_STEP) }) {
-                        Icon(Icons.AutoMirrored.Filled.VolumeDown, contentDescription = "Volume omlaag")
+                        Icon(Icons.AutoMirrored.Filled.VolumeDown, contentDescription = tr("Volume omlaag", "Volume down"))
                     }
                     Slider(
                         value = dragValue ?: level.toFloat(),
@@ -1370,7 +1380,7 @@ private fun MemberVolumeSheet(
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(onClick = { onSetVolume(member.id, level + GROUP_VOLUME_STEP) }) {
-                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = "Volume omhoog")
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = tr("Volume omhoog", "Volume up"))
                     }
                     Text(
                         "$shown%",
@@ -1382,7 +1392,7 @@ private fun MemberVolumeSheet(
 
             if (members.isEmpty()) {
                 Text(
-                    "Geen spelers in deze groep gevonden.",
+                    tr("Geen spelers in deze groep gevonden.", "No players found in this group."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 16.dp)
@@ -1411,7 +1421,7 @@ private fun TransferSheet(
                 Icon(Icons.Filled.SyncAlt, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "MUZIEK VERHUIZEN",
+                    tr("MUZIEK VERHUIZEN", "MOVE MUSIC"),
                     style = MaterialTheme.typography.labelLarge,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 2.sp
@@ -1419,7 +1429,7 @@ private fun TransferSheet(
             }
             
             Spacer(Modifier.height(16.dp))
-            Text("Waar wil je verder luisteren?", style = MaterialTheme.typography.bodyMedium)
+            Text(tr("Waar wil je verder luisteren?", "Where do you want to continue listening?"), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(16.dp))
 
             players.forEach { player ->
@@ -1433,7 +1443,7 @@ private fun TransferSheet(
             
             if (players.isEmpty()) {
                 Text(
-                    "Geen beschikbare spelers gevonden.",
+                    tr("Geen beschikbare spelers gevonden.", "No available players found."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 16.dp)
@@ -1485,11 +1495,11 @@ private fun MusicWizard(
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = when(step) {
-                        1 -> "KIES EEN SPELER"
-                        2 -> "KIES MUZIEK"
-                        3 -> "PRESENTATOR?"
-                        4 -> "KIES PRESENTATOR"
-                        else -> "BEVESTIGEN"
+                        1 -> tr("KIES EEN SPELER", "CHOOSE A PLAYER")
+                        2 -> tr("KIES MUZIEK", "CHOOSE MUSIC")
+                        3 -> tr("PRESENTATOR?", "HOST?")
+                        4 -> tr("KIES PRESENTATOR", "CHOOSE HOST")
+                        else -> tr("BEVESTIGEN", "CONFIRM")
                     },
                     style = MaterialTheme.typography.labelLarge,
                     fontFamily = FontFamily.Monospace,
@@ -1501,7 +1511,7 @@ private fun MusicWizard(
 
             when (step) {
                 1 -> {
-                    Text("Op welk apparaat wil je luisteren?", style = MaterialTheme.typography.bodyMedium)
+                    Text(tr("Op welk apparaat wil je luisteren?", "Which device do you want to listen on?"), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(16.dp))
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                         items(players) { player ->
@@ -1518,7 +1528,7 @@ private fun MusicWizard(
                     }
                 }
                 2 -> {
-                    Text("Wat wil je afspelen?", style = MaterialTheme.typography.bodyMedium)
+                    Text(tr("Wat wil je afspelen?", "What do you want to play?"), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(16.dp))
                     if (isPlaylistsLoading) {
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -1546,12 +1556,12 @@ private fun MusicWizard(
                         }
                     }
                     TextButton(onClick = { step = 1 }, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Terug naar spelers")
+                        Text(tr("Terug naar spelers", "Back to players"))
                     }
                 }
                 3 -> {
                     Text(
-                        "Wil je er een presentator bij? Die praat je playlist aan elkaar als AI Radio.",
+                        tr("Wil je er een presentator bij? Die praat je playlist aan elkaar als AI Radio.", "Would you like a host? They'll present your playlist as AI Radio."),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(16.dp))
@@ -1560,7 +1570,7 @@ private fun MusicWizard(
                         enabled = hosts.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("JA, PRESENTATOR KIEZEN")
+                        Text(tr("JA, PRESENTATOR KIEZEN", "YES, CHOOSE A HOST"))
                     }
                     OutlinedButton(
                         onClick = {
@@ -1569,22 +1579,22 @@ private fun MusicWizard(
                         },
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     ) {
-                        Text("NEE, GEWOON DE PLAYLIST")
+                        Text(tr("NEE, GEWOON DE PLAYLIST", "NO, JUST THE PLAYLIST"))
                     }
                     if (hosts.isEmpty()) {
                         Text(
-                            "Geen presentatoren gevonden. Maak er eerst een aan bij AI Radio DJ.",
+                            tr("Geen presentatoren gevonden. Maak er eerst een aan bij AI Radio DJ.", "No hosts found. Create one first in AI Radio DJ."),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
                     TextButton(onClick = { step = 2 }, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Terug naar muziek")
+                        Text(tr("Terug naar muziek", "Back to music"))
                     }
                 }
                 4 -> {
-                    Text("Welke presentator?", style = MaterialTheme.typography.bodyMedium)
+                    Text(tr("Welke presentator?", "Which host?"), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(16.dp))
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                         items(hosts) { host ->
@@ -1600,7 +1610,7 @@ private fun MusicWizard(
                         }
                     }
                     TextButton(onClick = { step = 3 }, modifier = Modifier.padding(top = 8.dp)) {
-                        Text("Terug")
+                        Text(tr("Terug", "Back"))
                     }
                 }
                 5 -> {
@@ -1609,13 +1619,13 @@ private fun MusicWizard(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text("Samenvatting:", style = MaterialTheme.typography.labelSmall)
+                            Text(tr("Samenvatting:", "Summary:"), style = MaterialTheme.typography.labelSmall)
                             Spacer(Modifier.height(8.dp))
-                            Text("Muziek: ${selectedPlaylist?.name}", fontWeight = FontWeight.Bold)
+                            Text(tr("Muziek: ${selectedPlaylist?.name}", "Music: ${selectedPlaylist?.name}"), fontWeight = FontWeight.Bold)
                             val playerDisplayName = selectedPlayer?.let { playerAliases[it.id] ?: it.name }
-                            Text("Speler: $playerDisplayName", fontWeight = FontWeight.Bold)
+                            Text(tr("Speler: $playerDisplayName", "Player: $playerDisplayName"), fontWeight = FontWeight.Bold)
                             selectedHost?.let {
-                                Text("Presentator: ${it.name}  ·  AI Radio", fontWeight = FontWeight.Bold)
+                                Text(tr("Presentator: ${it.name}  ·  AI Radio", "Host: ${it.name}  ·  AI Radio"), fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -1632,7 +1642,7 @@ private fun MusicWizard(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (selectedHost != null) "START MET PRESENTATOR" else "START MUZIEK")
+                        Text(if (selectedHost != null) tr("START MET PRESENTATOR", "START WITH HOST") else tr("START MUZIEK", "START MUSIC"))
                     }
 
                     OutlinedButton(
@@ -1642,7 +1652,7 @@ private fun MusicWizard(
                         },
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     ) {
-                        Text("Opnieuw beginnen")
+                        Text(tr("Opnieuw beginnen", "Start over"))
                     }
                 }
             }
@@ -1679,7 +1689,7 @@ private fun visibleSortedPlayers(state: UiState): List<MassPlayer> {
 
 /** Naam in de keuzelijst: "Deze telefoon" voor de eigen Sendspin-speler, anders alias of MA-naam. */
 private fun playerLabel(player: MassPlayer, state: UiState): String =
-    if (state.isOwnPlayer(player)) "Deze telefoon" else state.playerAliases[player.id] ?: player.name
+    if (state.isOwnPlayer(player)) tr("Deze telefoon", "This phone") else state.playerAliases[player.id] ?: player.name
 
 /**
  * True zolang de app in beeld is (lifecycle STARTED). Tik-lusjes in de UI (klokjes,
@@ -1761,7 +1771,7 @@ private fun PlayerDropdown(state: UiState, onSelect: (String) -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = selected?.let { formatPlayerName(it) } ?: "Kies Speler",
+                        text = selected?.let { formatPlayerName(it) } ?: tr("Kies Speler", "Choose player"),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1773,7 +1783,7 @@ private fun PlayerDropdown(state: UiState, onSelect: (String) -> Unit) {
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                         ) {
                             Text(
-                                "Groep",
+                                tr("Groep", "Group"),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1782,8 +1792,8 @@ private fun PlayerDropdown(state: UiState, onSelect: (String) -> Unit) {
                     }
                 }
 
-                val locationText = if (!state.isNearLocation) "📍 Buitenshuis (150m+)" else null
-                val subtitleText = locationText ?: selected?.playbackState?.replaceFirstChar { it.uppercase() } ?: "Beschikbaar"
+                val locationText = if (!state.isNearLocation) tr("📍 Buitenshuis (150m+)", "📍 Away from home (150m+)") else null
+                val subtitleText = locationText ?: selected?.playbackState?.let { playbackStateLabel(it) } ?: tr("Beschikbaar", "Available")
                 Text(
                     text = subtitleText,
                     style = MaterialTheme.typography.bodySmall,
@@ -1859,7 +1869,7 @@ private fun PlayerDropdown(state: UiState, onSelect: (String) -> Unit) {
                             val vol = player.effectiveVolume(state.players)
                             when {
                                 player.isPoweredOff(state.players) -> Text(
-                                    "uit",
+                                    tr("uit", "off"),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 )
@@ -1868,7 +1878,7 @@ private fun PlayerDropdown(state: UiState, onSelect: (String) -> Unit) {
                                     if (vol == 0) {
                                         Icon(
                                             Icons.AutoMirrored.Filled.VolumeOff,
-                                            contentDescription = "Stil",
+                                            contentDescription = tr("Stil", "Muted"),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(14.dp)
                                         )
@@ -1894,7 +1904,7 @@ private fun PlayerDropdown(state: UiState, onSelect: (String) -> Unit) {
                 DropdownMenuItem(
                     text = {
                         Text(
-                            if (showSecondary) "Minder spelers tonen" else "Overige spelers (${secondaryPlayers.size})",
+                            if (showSecondary) tr("Minder spelers tonen", "Show fewer players") else tr("Overige spelers (${secondaryPlayers.size})", "Other players (${secondaryPlayers.size})"),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2131,7 +2141,7 @@ private fun NowPlayingHero(
                             ?: activePlaylistName?.takeIf { it.isNotBlank() }
                             ?: "RADIO").uppercase()
                         isPlaying && !activePlaylistName.isNullOrBlank() -> activePlaylistName.uppercase()
-                        else -> "NU SPELEND"
+                        else -> tr("NU SPELEND", "NOW PLAYING")
                     }
 
                     val fallbackArtist = if (hasStreamInfo) track?.streamArtist else track?.artist
@@ -2338,7 +2348,7 @@ private fun HeroToggleIcon(
             .clip(CircleShape)
             .background(if (enabled) onCard.copy(alpha = 0.18f) else Color.Transparent)
             .clickable(onClick = onClick)
-            .semantics { contentDescription = "$description ${if (enabled) "aan" else "uit"}" },
+            .semantics { contentDescription = "$description ${if (enabled) tr("aan", "on") else tr("uit", "off")}" },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -2402,8 +2412,8 @@ private fun TransportRow(
         AlertDialog(
             onDismissRequest = { confirmClear = false },
             icon = { Icon(Icons.Filled.DeleteSweep, contentDescription = null) },
-            title = { Text("Wachtrij wissen?") },
-            text = { Text("Alle nummers in de wachtrij van deze speler worden verwijderd.") },
+            title = { Text(tr("Wachtrij wissen?", "Clear queue?")) },
+            text = { Text(tr("Alle nummers in de wachtrij van deze speler worden verwijderd.", "All tracks in this player's queue will be removed.")) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -2412,12 +2422,12 @@ private fun TransportRow(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Wissen")
+                    Text(tr("Wissen", "Clear"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmClear = false }) {
-                    Text("Annuleren")
+                    Text(tr("Annuleren", "Cancel"))
                 }
             }
         )
@@ -2446,14 +2456,14 @@ private fun TransportRow(
             ) {
                 Icon(
                     Icons.Filled.DeleteSweep,
-                    contentDescription = "Wachtrij wissen",
+                    contentDescription = tr("Wachtrij wissen", "Clear queue"),
                     tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                     modifier = Modifier.size(22.dp)
                 )
             }
 
             IconButton(onClick = onPrevious, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Filled.SkipPrevious, contentDescription = "Vorige", modifier = Modifier.size(26.dp))
+                Icon(Icons.Filled.SkipPrevious, contentDescription = tr("Vorige", "Previous"), modifier = Modifier.size(26.dp))
             }
 
             Surface(
@@ -2466,7 +2476,7 @@ private fun TransportRow(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying) "Pauzeren" else "Afspelen",
+                        contentDescription = if (isPlaying) tr("Pauzeren", "Pause") else tr("Afspelen", "Play"),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.size(30.dp)
                     )
@@ -2474,7 +2484,7 @@ private fun TransportRow(
             }
 
             IconButton(onClick = onNext, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Filled.SkipNext, contentDescription = "Volgende", modifier = Modifier.size(26.dp))
+                Icon(Icons.Filled.SkipNext, contentDescription = tr("Volgende", "Next"), modifier = Modifier.size(26.dp))
             }
 
             IconButton(
@@ -2505,7 +2515,7 @@ private fun TransportRow(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.VolumeDown,
-                        contentDescription = "Volume omlaag",
+                        contentDescription = tr("Volume omlaag", "Volume down"),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -2525,7 +2535,7 @@ private fun TransportRow(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = "Volume omhoog",
+                        contentDescription = tr("Volume omhoog", "Volume up"),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -2668,12 +2678,12 @@ private fun PlayOptionsSheet(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
             ListItem(
-                headlineContent = { Text("Nu afspelen") },
+                headlineContent = { Text(tr("Nu afspelen", "Play now")) },
                 leadingContent = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
                 modifier = Modifier.clickable(onClick = onPlayNow)
             )
             ListItem(
-                headlineContent = { Text("Als volgende afspelen") },
+                headlineContent = { Text(tr("Als volgende afspelen", "Play next")) },
                 leadingContent = { Icon(Icons.Filled.QueuePlayNext, contentDescription = null) },
                 modifier = Modifier.clickable(onClick = onPlayNext)
             )
@@ -2695,7 +2705,7 @@ private fun FavoritesSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(bottom = 24.dp).heightIn(max = 480.dp)) {
             Text(
-                "FAVORIETE PLAYLISTS",
+                tr("FAVORIETE PLAYLISTS", "FAVORITE PLAYLISTS"),
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2710,7 +2720,7 @@ private fun FavoritesSheet(
                 playlists.isEmpty() -> {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "Geen favoriete playlists gevonden in Music Assistant.",
+                            tr("Geen favoriete playlists gevonden in Music Assistant.", "No favorite playlists found in Music Assistant."),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -2742,7 +2752,7 @@ private fun FavoritesSheet(
                                     )
                                     playlist.trackCount?.let {
                                         Text(
-                                            "$it nummers",
+                                            tr("$it nummers", "$it tracks"),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -2807,7 +2817,7 @@ private fun RadiosSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(bottom = 24.dp).heightIn(max = 480.dp)) {
             Text(
-                "FAVORIETE RADIOZENDERS",
+                tr("FAVORIETE RADIOZENDERS", "FAVORITE RADIO STATIONS"),
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2822,7 +2832,7 @@ private fun RadiosSheet(
                 radios.isEmpty() -> {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "Geen favoriete radiozenders gevonden in Music Assistant.",
+                            tr("Geen favoriete radiozenders gevonden in Music Assistant.", "No favorite radio stations found in Music Assistant."),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -2897,7 +2907,7 @@ private fun SearchSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(bottom = 24.dp).heightIn(max = 560.dp)) {
             Text(
-                "ZOEKEN",
+                tr("ZOEKEN", "SEARCH"),
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2906,13 +2916,13 @@ private fun SearchSheet(
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("Artiest, titel, album of afspeellijst") },
+                label = { Text(tr("Artiest, titel, album of afspeellijst", "Artist, title, album or playlist")) },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = {
                     if (text.isNotBlank()) {
                         IconButton(onClick = { text = "" }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Wissen")
+                            Icon(Icons.Filled.Close, contentDescription = tr("Wissen", "Clear"))
                         }
                     }
                 },
@@ -2932,7 +2942,7 @@ private fun SearchSheet(
                         FilterChip(
                             selected = selectedProvider == null,
                             onClick = { selectedProvider = null },
-                            label = { Text("Alle") }
+                            label = { Text(tr("Alle", "All")) }
                         )
                     }
                     items(providerOptions) { provider ->
@@ -2956,7 +2966,7 @@ private fun SearchSheet(
                 text.isBlank() -> {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "Typ een artiest, titel, album of afspeellijst om te zoeken.",
+                            tr("Typ een artiest, titel, album of afspeellijst om te zoeken.", "Type an artist, title, album or playlist to search."),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -2965,7 +2975,7 @@ private fun SearchSheet(
                 shown.isEmpty -> {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "Niks gevonden.",
+                            tr("Niks gevonden.", "Nothing found."),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -2974,7 +2984,7 @@ private fun SearchSheet(
                 else -> {
                     LazyColumn {
                         if (shown.tracks.isNotEmpty()) {
-                            item { SearchSectionHeader("Nummers") }
+                            item { SearchSectionHeader(tr("Nummers", "Tracks")) }
                             items(shown.tracks) { track ->
                                 SearchResultRow(
                                     title = track.title,
@@ -2986,7 +2996,7 @@ private fun SearchSheet(
                             }
                         }
                         if (shown.artists.isNotEmpty()) {
-                            item { SearchSectionHeader("Artiesten") }
+                            item { SearchSectionHeader(tr("Artiesten", "Artists")) }
                             items(shown.artists) { artist ->
                                 SearchResultRow(
                                     title = artist.name,
@@ -3010,11 +3020,11 @@ private fun SearchSheet(
                             }
                         }
                         if (shown.playlists.isNotEmpty()) {
-                            item { SearchSectionHeader("Afspeellijsten") }
+                            item { SearchSectionHeader(tr("Afspeellijsten", "Playlists")) }
                             items(shown.playlists) { playlist ->
                                 SearchResultRow(
                                     title = playlist.name,
-                                    subtitle = playlist.trackCount?.let { "$it nummers" } ?: "",
+                                    subtitle = playlist.trackCount?.let { tr("$it nummers", "$it tracks") } ?: "",
                                     imagePath = playlist.imagePath,
                                     fallbackTerm = playlist.name,
                                     onClick = { onSelectPlaylist(playlist) }
@@ -3043,9 +3053,9 @@ private fun providerDisplayName(domain: String): String = when (domain) {
     "plex" -> "Plex"
     "jellyfin" -> "Jellyfin"
     "opensubsonic", "subsonic" -> "Subsonic"
-    "filesystem_local" -> "Lokale bestanden"
-    "filesystem_smb" -> "Netwerkshare"
-    "builtin" -> "Ingebouwd"
+    "filesystem_local" -> tr("Lokale bestanden", "Local files")
+    "filesystem_smb" -> tr("Netwerkshare", "Network share")
+    "builtin" -> tr("Ingebouwd", "Built-in")
     "audible" -> "Audible"
     "podcastfeed" -> "Podcasts"
     else -> domain.replace('_', ' ').replaceFirstChar { it.uppercase() }
@@ -3129,7 +3139,7 @@ private fun AiRadioPanel(
     onEditSection: (AiRadioSection) -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Stations", "Presentatoren", "Segmenten")
+    val tabs = listOf("Stations", tr("Presentatoren", "Hosts"), tr("Segmenten", "Segments"))
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(bottom = 32.dp).heightIn(max = 640.dp)) {
@@ -3172,7 +3182,7 @@ private fun AiRadioListHeader(title: String, onCreate: () -> Unit, extra: @Compo
         Button(onClick = onCreate) {
             Icon(Icons.Default.Add, null)
             Spacer(Modifier.width(4.dp))
-            Text("NIEUW")
+            Text(tr("NIEUW", "NEW"))
         }
     }
 }
@@ -3205,7 +3215,7 @@ private fun StationsTab(
         if (activeDj?.isDjActive == true) {
             item {
                 Text(
-                    "DJ actief${activeDj.activeHostName?.let { " · $it" } ?: ""}",
+                    tr("DJ actief${activeDj.activeHostName?.let { " · $it" } ?: ""}", "DJ active${activeDj.activeHostName?.let { " · $it" } ?: ""}"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -3213,7 +3223,7 @@ private fun StationsTab(
             }
         }
         items(items = stations, key = { it.id }) { station ->
-            val hostName = hosts.firstOrNull { it.id == station.hostId }?.name ?: station.hostId ?: "Geen presentator"
+            val hostName = hosts.firstOrNull { it.id == station.hostId }?.name ?: station.hostId ?: tr("Geen presentator", "No host")
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                 onClick = { onStart(station) }
@@ -3228,14 +3238,14 @@ private fun StationsTab(
                         )
                     }
                     IconButton(onClick = { onEdit(station) }) {
-                        Icon(Icons.Default.Edit, "Aanpassen", tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Edit, tr("Aanpassen", "Edit"), tint = MaterialTheme.colorScheme.primary)
                     }
                     Icon(Icons.Filled.PlayArrow, null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
         if (stations.isEmpty()) {
-            item { Text("Nog geen stations. Maak er één met NIEUW.", Modifier.padding(vertical = 16.dp)) }
+            item { Text(tr("Nog geen stations. Maak er één met NIEUW.", "No stations yet. Create one with NEW."), Modifier.padding(vertical = 16.dp)) }
         }
     }
 }
@@ -3248,12 +3258,12 @@ private fun HostsTab(
     onEdit: (AiRadioHost) -> Unit
 ) {
     LazyColumn(Modifier.fillMaxWidth().padding(16.dp)) {
-        item { AiRadioListHeader("Presentatoren", onCreate) }
+        item { AiRadioListHeader(tr("Presentatoren", "Hosts"), onCreate) }
         items(items = hosts, key = { it.id }) { host ->
             val subtitle = buildList {
                 if (!host.language.isNullOrBlank()) add(host.language)
                 if (!host.ttsEngine.isNullOrBlank()) add(host.ttsEngine)
-                add("${host.sectionIds.size} segment${if (host.sectionIds.size == 1) "" else "en"}")
+                add("${host.sectionIds.size} segment${if (host.sectionIds.size == 1) "" else tr("en", "s")}")
             }.joinToString(" · ")
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -3271,12 +3281,12 @@ private fun HostsTab(
             }
         }
         if (hosts.isEmpty()) {
-            item { Text("Nog geen presentatoren. Maak er één met NIEUW.", Modifier.padding(vertical = 16.dp)) }
+            item { Text(tr("Nog geen presentatoren. Maak er één met NIEUW.", "No hosts yet. Create one with NEW."), Modifier.padding(vertical = 16.dp)) }
         }
         if (sections.isNotEmpty() && hosts.isNotEmpty()) {
             item {
                 Text(
-                    "Tip: segmenten koppel je binnen een presentator.",
+                    tr("Tip: segmenten koppel je binnen een presentator.", "Tip: you link segments from within a host."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 12.dp)
@@ -3293,7 +3303,7 @@ private fun SectionsTab(
     onEdit: (AiRadioSection) -> Unit
 ) {
     LazyColumn(Modifier.fillMaxWidth().padding(16.dp)) {
-        item { AiRadioListHeader("Segmenten", onCreate) }
+        item { AiRadioListHeader(tr("Segmenten", "Segments"), onCreate) }
         items(items = sections, key = { it.id }) { section ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -3304,7 +3314,7 @@ private fun SectionsTab(
                         Text(section.name, style = MaterialTheme.typography.titleMedium)
                         Text(
                             "${section.type} · websearch: ${section.webSearch}" +
-                                (if (section.maxChars > 0) " · ${section.maxChars} tekens" else ""),
+                                (if (section.maxChars > 0) " · ${section.maxChars} ${tr("tekens", "characters")}" else ""),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -3316,7 +3326,7 @@ private fun SectionsTab(
         if (sections.isEmpty()) {
             item {
                 Text(
-                    "Geen segmenten gevonden. Als je MA-server 'ai_radio/sections/list' niet ondersteunt blijft dit leeg.",
+                    tr("Geen segmenten gevonden. Als je MA-server 'ai_radio/sections/list' niet ondersteunt blijft dit leeg.", "No segments found. If your MA server doesn't support 'ai_radio/sections/list', this stays empty."),
                     Modifier.padding(vertical = 16.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -3335,7 +3345,7 @@ private fun IdPickerField(
     onSelect: (String) -> Unit
 ) {
     var open by remember { mutableStateOf(false) }
-    val current = options.firstOrNull { it.first == selectedId }?.second ?: "— kies —"
+    val current = options.firstOrNull { it.first == selectedId }?.second ?: tr("— kies —", "— choose —")
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Box {
@@ -3376,15 +3386,15 @@ private fun StationEditorSheet(
     var maxDuration by remember { mutableIntStateOf(station.maxDurationMinutes) }
     var shuffle by remember { mutableStateOf(station.shuffleSourceTracks) }
 
-    val hostOptions = listOf("" to "Geen presentator") + hosts.map { it.id to it.name }
-    val playerOptions = listOf("" to "Volg huidige speler") + players.map { it.id to it.name }
+    val hostOptions = listOf("" to tr("Geen presentator", "No host")) + hosts.map { it.id to it.name }
+    val playerOptions = listOf("" to tr("Volg huidige speler", "Follow current player")) + players.map { it.id to it.name }
     val playlistOptions = buildList {
         if (station.sourcePlaylistId != null &&
             playlists.none { it.itemIdFromUri == station.sourcePlaylistId }
         ) {
-            add("" to "Huidige bron behouden (id ${station.sourcePlaylistId})")
+            add("" to tr("Huidige bron behouden (id ${station.sourcePlaylistId})", "Keep current source (id ${station.sourcePlaylistId})"))
         } else {
-            add("" to "— kies playlist —")
+            add("" to tr("— kies playlist —", "— choose playlist —"))
         }
         addAll(playlists.map { it.uri to it.name })
     }
@@ -3394,36 +3404,36 @@ private fun StationEditorSheet(
             Modifier.padding(20.dp).padding(bottom = 32.dp).verticalScroll(rememberScrollState())
         ) {
             Text(
-                if (station.id.isBlank()) "NIEUW STATION" else "STATION AANPASSEN",
+                if (station.id.isBlank()) tr("NIEUW STATION", "NEW STATION") else tr("STATION AANPASSEN", "EDIT STATION"),
                 style = MaterialTheme.typography.labelSmall
             )
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
-                label = { Text("Naam") }, singleLine = true,
+                label = { Text(tr("Naam", "Name")) }, singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            IdPickerField("Presentator", hostOptions, hostId) { hostId = it }
-            IdPickerField("Bron-playlist", playlistOptions, playlistUri) { playlistUri = it }
-            IdPickerField("Standaardspeler", playerOptions, defaultPlayerId) { defaultPlayerId = it }
+            IdPickerField(tr("Presentator", "Host"), hostOptions, hostId) { hostId = it }
+            IdPickerField(tr("Bron-playlist", "Source playlist"), playlistOptions, playlistUri) { playlistUri = it }
+            IdPickerField(tr("Standaardspeler", "Default player"), playerOptions, defaultPlayerId) { defaultPlayerId = it }
 
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Max duur", Modifier.weight(1f))
+                Text(tr("Max duur", "Max duration"), Modifier.weight(1f))
                 IconButton(onClick = { if (maxDuration >= 10) maxDuration -= 10 else maxDuration = 0 }) {
                     Icon(Icons.Default.Remove, null)
                 }
                 Text(
-                    if (maxDuration == 0) "Onbeperkt" else "$maxDuration min",
+                    if (maxDuration == 0) tr("Onbeperkt", "Unlimited") else "$maxDuration min",
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = { maxDuration += 10 }) { Icon(Icons.Default.Add, null) }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Bron-tracks husselen", Modifier.weight(1f))
+                Text(tr("Bron-tracks husselen", "Shuffle source tracks"), Modifier.weight(1f))
                 Switch(checked = shuffle, onCheckedChange = { shuffle = it })
             }
 
@@ -3445,7 +3455,7 @@ private fun StationEditorSheet(
                 },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("STATION OPSLAAN") }
+            ) { Text(tr("STATION OPSLAAN", "SAVE STATION")) }
 
             if (station.id.isNotBlank()) {
                 TextButton(
@@ -3455,7 +3465,7 @@ private fun StationEditorSheet(
                 ) {
                     Icon(Icons.Default.Delete, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("VERWIJDEREN")
+                    Text(tr("VERWIJDEREN", "DELETE"))
                 }
             }
         }
@@ -3473,7 +3483,7 @@ private val FALLBACK_LANGUAGES = listOf(
  * Server-ontdekte engines en een "Aangepast…"-optie worden er in de UI bij gezet.
  */
 private val KNOWN_TTS_ENGINES = listOf(
-    "hass/tts.elevenlabs_tekst_naar_spraak" to "ElevenLabs Tekst-naar-spraak",
+    "hass/tts.elevenlabs_tekst_naar_spraak" to tr("ElevenLabs Tekst-naar-spraak", "ElevenLabs Text-to-speech"),
     "hass/tts.google_ai_tts" to "Google AI TTS",
     "hass/tts.home_assistant_cloud" to "Home Assistant Cloud",
     "hass/tts.piper" to "Piper"
@@ -3498,27 +3508,27 @@ private fun HostEditorSheet(
     var sectionOrderJson by remember { mutableStateOf(host.sectionOrderJson ?: "") }
     var showAdvanced by remember { mutableStateOf(false) }
 
-    val mergeOptions = listOf("" to "Geen") + sections.map { it.id to it.name }
+    val mergeOptions = listOf("" to tr("Geen", "None")) + sections.map { it.id to it.name }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.padding(20.dp).padding(bottom = 32.dp).verticalScroll(rememberScrollState())
         ) {
             Text(
-                if (host.id.isBlank()) "NIEUWE PRESENTATOR" else "PRESENTATOR AANPASSEN",
+                if (host.id.isBlank()) tr("NIEUWE PRESENTATOR", "NEW HOST") else tr("PRESENTATOR AANPASSEN", "EDIT HOST"),
                 style = MaterialTheme.typography.labelSmall
             )
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
-                label = { Text("Naam") }, singleLine = true,
+                label = { Text(tr("Naam", "Name")) }, singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(10.dp))
             OutlinedTextField(
                 value = instructions, onValueChange = { instructions = it },
-                label = { Text("Instructies / persoonlijkheid") },
+                label = { Text(tr("Instructies / persoonlijkheid", "Instructions / personality")) },
                 minLines = 4,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -3526,11 +3536,11 @@ private fun HostEditorSheet(
             // TTS: dropdown met bekende engines + "Aangepast…" voor een vrij in te typen HA-id.
             val customTts = "__custom"
             val ttsOptions = buildList {
-                add("" to "Standaard")
+                add("" to tr("Standaard", "Default"))
                 addAll(KNOWN_TTS_ENGINES)
                 options.ttsEngines.forEach { v -> if (none { it.first == v }) add(v to v) }
                 host.ttsEngine?.takeIf { it.isNotBlank() }?.let { c -> if (none { it.first == c }) add(c to c) }
-                add(customTts to "Aangepast…")
+                add(customTts to tr("Aangepast…", "Custom…"))
             }
             var ttsIsCustom by remember {
                 mutableStateOf(!host.ttsEngine.isNullOrBlank() && KNOWN_TTS_ENGINES.none { it.first == host.ttsEngine } && options.ttsEngines.none { it == host.ttsEngine })
@@ -3550,13 +3560,13 @@ private fun HostEditorSheet(
 
             val langValues = (options.languages.ifEmpty { FALLBACK_LANGUAGES } + language)
                 .filter { it.isNotBlank() }.distinct()
-            val langOptions = listOf("" to "Standaard") + langValues.map { it to it }
-            IdPickerField("Taal", langOptions, language) { language = it }
+            val langOptions = listOf("" to tr("Standaard", "Default")) + langValues.map { it to it }
+            IdPickerField(tr("Taal", "Language"), langOptions, language) { language = it }
 
             Spacer(Modifier.height(12.dp))
-            Text("Segmenten", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Segmenten", "Segments"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (sections.isEmpty()) {
-                Text("Nog geen segmenten aangemaakt.", style = MaterialTheme.typography.bodySmall)
+                Text(tr("Nog geen segmenten aangemaakt.", "No segments created yet."), style = MaterialTheme.typography.bodySmall)
             } else {
                 sections.forEach { sec ->
                     Row(
@@ -3577,14 +3587,14 @@ private fun HostEditorSheet(
                 }
             }
 
-            IdPickerField("Samenvoeg-segment", mergeOptions, mergeSectionId) { mergeSectionId = it }
+            IdPickerField(tr("Samenvoeg-segment", "Merge segment"), mergeOptions, mergeSectionId) { mergeSectionId = it }
 
             Spacer(Modifier.height(8.dp))
             Row(
                 Modifier.fillMaxWidth().clickable { showAdvanced = !showAdvanced },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Geavanceerd: volgorde-regels (JSON)", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                Text(tr("Geavanceerd: volgorde-regels (JSON)", "Advanced: order rules (JSON)"), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                 Icon(if (showAdvanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
             }
             if (showAdvanced) {
@@ -3596,7 +3606,7 @@ private fun HostEditorSheet(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "Ongewijzigd laten = precies terugsturen wat de server gaf.",
+                    tr("Ongewijzigd laten = precies terugsturen wat de server gaf.", "Leave unchanged = send back exactly what the server returned."),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -3619,7 +3629,7 @@ private fun HostEditorSheet(
                 },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("PRESENTATOR OPSLAAN") }
+            ) { Text(tr("PRESENTATOR OPSLAAN", "SAVE HOST")) }
 
             if (host.id.isNotBlank()) {
                 TextButton(
@@ -3629,7 +3639,7 @@ private fun HostEditorSheet(
                 ) {
                     Icon(Icons.Default.Delete, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("VERWIJDEREN")
+                    Text(tr("VERWIJDEREN", "DELETE"))
                 }
             }
         }
@@ -3655,19 +3665,19 @@ private fun SectionEditorSheet(
             Modifier.padding(20.dp).padding(bottom = 32.dp).verticalScroll(rememberScrollState())
         ) {
             Text(
-                if (section.id.isBlank()) "NIEUW SEGMENT" else "SEGMENT AANPASSEN",
+                if (section.id.isBlank()) tr("NIEUW SEGMENT", "NEW SEGMENT") else tr("SEGMENT AANPASSEN", "EDIT SEGMENT"),
                 style = MaterialTheme.typography.labelSmall
             )
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
-                label = { Text("Naam") }, singleLine = true,
+                label = { Text(tr("Naam", "Name")) }, singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             IdPickerField(
                 "Type",
-                listOf("ai_text" to "ai_text (tekst genereren)", "ai_meta" to "ai_meta (drafts samenvoegen)"),
+                listOf("ai_text" to tr("ai_text (tekst genereren)", "ai_text (generate text)"), "ai_meta" to tr("ai_meta (drafts samenvoegen)", "ai_meta (merge drafts)")),
                 type
             ) { type = it }
             IdPickerField(
@@ -3686,7 +3696,7 @@ private fun SectionEditorSheet(
             OutlinedTextField(
                 value = maxChars,
                 onValueChange = { new -> maxChars = new.filter { it.isDigit() } },
-                label = { Text("Max tekens (leeg = geen limiet)") },
+                label = { Text(tr("Max tekens (leeg = geen limiet)", "Max characters (empty = no limit)")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -3706,7 +3716,7 @@ private fun SectionEditorSheet(
                 },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("SEGMENT OPSLAAN") }
+            ) { Text(tr("SEGMENT OPSLAAN", "SAVE SEGMENT")) }
 
             if (section.id.isNotBlank()) {
                 TextButton(
@@ -3716,7 +3726,7 @@ private fun SectionEditorSheet(
                 ) {
                     Icon(Icons.Default.Delete, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("VERWIJDEREN")
+                    Text(tr("VERWIJDEREN", "DELETE"))
                 }
             }
         }
@@ -3892,4 +3902,12 @@ private fun CassetteLabel(side: String, title: String, modifier: Modifier = Modi
             }
         }
     }
+}
+
+/** MA-afspeelstatus (playing/paused/idle) als leesbare tekst in de app-taal. */
+private fun playbackStateLabel(state: String): String = when (state.lowercase()) {
+    "playing" -> tr("Speelt", "Playing")
+    "paused" -> tr("Gepauzeerd", "Paused")
+    "idle" -> tr("Inactief", "Idle")
+    else -> state.replaceFirstChar { it.uppercase() }
 }

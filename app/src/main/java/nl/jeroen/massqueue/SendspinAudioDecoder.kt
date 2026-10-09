@@ -13,9 +13,21 @@ import java.nio.ByteOrder
 const val AUDIO_LOG_TAG = "SpinflowAudio"
 
 /** Instelling "Audiokwaliteit" voor de eigen Sendspin-speler. */
-enum class SendspinAudioQuality(val codec: String, val label: String, val description: String) {
-    LOSSLESS("flac", "Lossless (FLAC)", "Zelfde geluid als PCM, ongeveer de helft van de data"),
-    ORIGINAL("pcm", "Origineel (PCM)", "Onbewerkte audio, meeste data (standaard)");
+enum class SendspinAudioQuality(val codec: String) {
+    LOSSLESS("flac"),
+    ORIGINAL("pcm");
+
+    val label: String
+        get() = when (this) {
+            LOSSLESS -> "Lossless (FLAC)"
+            ORIGINAL -> tr("Origineel (PCM)", "Original (PCM)")
+        }
+
+    val description: String
+        get() = when (this) {
+            LOSSLESS -> tr("Zelfde geluid als PCM, ongeveer de helft van de data", "Same sound as PCM, about half the data")
+            ORIGINAL -> tr("Onbewerkte audio, meeste data (standaard)", "Unprocessed audio, most data (default)")
+        }
 
     /** Voorkeursvolgorde van codecs: de gekozen eerst, PCM altijd erin als terugval. */
     val codecPreference: List<String>

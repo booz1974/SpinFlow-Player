@@ -28,12 +28,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.jeroen.massqueue.AppLanguage
 import nl.jeroen.massqueue.BuildConfig
 import nl.jeroen.massqueue.DEFAULT_SENDSPIN_LOCAL_URL
 import nl.jeroen.massqueue.MassLocation
 import nl.jeroen.massqueue.MassPlayer
 import nl.jeroen.massqueue.PhonePlayerStatus
 import nl.jeroen.massqueue.SendspinAudioQuality
+import nl.jeroen.massqueue.tr
 import nl.jeroen.massqueue.ui.theme.AppTheme
 import nl.jeroen.massqueue.ui.theme.colorSchemeFor
 
@@ -63,6 +65,8 @@ fun SettingsScreen(
     onSetPlayerAlias: (String, String) -> Unit,
     selectedTheme: AppTheme = AppTheme.CASSETTE,
     onSelectTheme: ((AppTheme) -> Unit)? = null,
+    selectedLanguage: AppLanguage = AppLanguage.SYSTEM,
+    onSelectLanguage: ((AppLanguage) -> Unit)? = null,
     showCompactHeader: Boolean = false,
     onToggleCompactHeader: ((Boolean) -> Unit)? = null,
     discoPlayerId: String? = null,
@@ -99,7 +103,7 @@ fun SettingsScreen(
                 title = {
                     Column {
                         Text(
-                            "Instellingen",
+                            tr("Instellingen", "Settings"),
                             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                         )
                         Text(
@@ -114,11 +118,11 @@ fun SettingsScreen(
                 navigationIcon = {
                     if (onClose != null) {
                         IconButton(onClick = onClose) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Terug")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Terug", "Back"))
                         }
                     } else {
                         IconButton(onClick = { if (url.isNotBlank()) onSave(url.trim(), token.trim()) }) {
-                            Icon(Icons.Default.Tune, contentDescription = "Instellingen")
+                            Icon(Icons.Default.Tune, contentDescription = tr("Instellingen", "Settings"))
                         }
                     }
                 },
@@ -132,7 +136,7 @@ fun SettingsScreen(
                     ) {
                         Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Opslaan", fontWeight = FontWeight.SemiBold)
+                        Text(tr("Opslaan", "Save"), fontWeight = FontWeight.SemiBold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -178,7 +182,7 @@ fun SettingsScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    url.trim().ifBlank { "Nog niet ingesteld" },
+                                    url.trim().ifBlank { tr("Nog niet ingesteld", "Not set yet") },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -188,7 +192,7 @@ fun SettingsScreen(
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 if (serverExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                contentDescription = if (serverExpanded) "Server-instellingen inklappen" else "Server-instellingen uitklappen"
+                                contentDescription = if (serverExpanded) tr("Server-instellingen inklappen", "Collapse server settings") else tr("Server-instellingen uitklappen", "Expand server settings")
                             )
                         }
                     }
@@ -198,7 +202,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = url,
                             onValueChange = { url = it },
-                            label = { Text("Server Adres (URL)") },
+                            label = { Text(tr("Server Adres (URL)", "Server address (URL)")) },
                             placeholder = { Text("https://homeassistant.<tailnet>.ts.net") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
@@ -212,8 +216,8 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = token,
                             onValueChange = { token = it },
-                            label = { Text("API Access Token (Optioneel)") },
-                            placeholder = { Text("Plak hier je long-lived access token") },
+                            label = { Text(tr("API Access Token (Optioneel)", "API access token (optional)")) },
+                            placeholder = { Text(tr("Plak hier je long-lived access token", "Paste your long-lived access token here")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Outlined.Key, contentDescription = null) },
@@ -221,7 +225,7 @@ fun SettingsScreen(
                                 IconButton(onClick = { showToken = !showToken }) {
                                     Icon(
                                         if (showToken) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                                        contentDescription = if (showToken) "Token verbergen" else "Token tonen"
+                                        contentDescription = if (showToken) tr("Token verbergen", "Hide token") else tr("Token tonen", "Show token")
                                     )
                                 }
                             },
@@ -257,13 +261,13 @@ fun SettingsScreen(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Telefoon als speler",
+                                    tr("Telefoon als speler", "Phone as player"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
                                     if (phonePlayerEnabled) phonePlayerStatus.text
-                                    else "Uit: deze telefoon verschijnt niet als speler in MA",
+                                    else tr("Uit: deze telefoon verschijnt niet als speler in MA", "Off: this phone does not appear as a player in MA"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (phonePlayerEnabled && phonePlayerStatus.isError) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.onSurfaceVariant
@@ -277,7 +281,7 @@ fun SettingsScreen(
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 if (phoneExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                contentDescription = if (phoneExpanded) "Speler-instellingen inklappen" else "Speler-instellingen uitklappen"
+                                contentDescription = if (phoneExpanded) tr("Speler-instellingen inklappen", "Collapse player settings") else tr("Speler-instellingen uitklappen", "Expand player settings")
                             )
                         }
                     }
@@ -289,7 +293,7 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = phoneName,
                             onValueChange = { phoneName = it },
-                            label = { Text("Naam in Music Assistant") },
+                            label = { Text(tr("Naam in Music Assistant", "Name in Music Assistant")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Outlined.Badge, contentDescription = null) },
@@ -299,9 +303,9 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = phoneUrl,
                             onValueChange = { phoneUrl = it },
-                            label = { Text("Sendspin-adres thuis (terugval)") },
+                            label = { Text(tr("Sendspin-adres thuis (terugval)", "Sendspin address at home (fallback)")) },
                             placeholder = { Text(DEFAULT_SENDSPIN_LOCAL_URL) },
-                            supportingText = { Text("Eerst via het server-adres hierboven, met je API-token; dit adres alleen als dat niet lukt") },
+                            supportingText = { Text(tr("Eerst via het server-adres hierboven, met je API-token; dit adres alleen als dat niet lukt", "First via the server address above, using your API token; this address only if that fails")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Outlined.Link, contentDescription = null) },
@@ -319,7 +323,7 @@ fun SettingsScreen(
                             ) {
                                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Toepassen", fontWeight = FontWeight.SemiBold)
+                                Text(tr("Toepassen", "Apply"), fontWeight = FontWeight.SemiBold)
                             }
                         }
 
@@ -331,7 +335,7 @@ fun SettingsScreen(
                                 value = phonePlayerAudioQuality.label,
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("Audiokwaliteit") },
+                                label = { Text(tr("Audiokwaliteit", "Audio quality")) },
                                 supportingText = { Text(phonePlayerAudioQuality.description) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
@@ -386,8 +390,8 @@ fun SettingsScreen(
             // 2. Color Theme Selection Card
             item {
                 SettingsSectionCard(
-                    title = "Kleurthema & Stijl",
-                    subtitle = "Kies jouw favoriete kleurenpalet voor de app",
+                    title = tr("Kleurthema & Stijl", "Color theme & style"),
+                    subtitle = tr("Kies jouw favoriete kleurenpalet voor de app", "Choose your favorite color palette for the app"),
                     icon = Icons.Outlined.Palette
                 ) {
                     var themesExpanded by remember { mutableStateOf(false) }
@@ -421,7 +425,7 @@ fun SettingsScreen(
                             }
                             Icon(
                                 if (themesExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                contentDescription = if (themesExpanded) "Thema's inklappen" else "Thema's uitklappen"
+                                contentDescription = if (themesExpanded) tr("Thema's inklappen", "Collapse themes") else tr("Thema's uitklappen", "Expand themes")
                             )
                         }
                     }
@@ -490,13 +494,13 @@ fun SettingsScreen(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Compacte Minimalist Header",
+                                    tr("Compacte Minimalist Header", "Compact minimalist header"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    if (showCompactHeader) "Actief: verbergt de cassette-banner voor maximale schermruimte"
-                                    else "Uitgeschakeld: toont de grote cassette-banner bovenin",
+                                    if (showCompactHeader) tr("Actief: verbergt de cassette-banner voor maximale schermruimte", "On: hides the cassette banner for maximum screen space")
+                                    else tr("Uitgeschakeld: toont de grote cassette-banner bovenin", "Off: shows the large cassette banner at the top"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -511,6 +515,50 @@ fun SettingsScreen(
                 }
             }
 
+            // Taal: titel in beide talen, zodat je hem ook in een onbekende taal terugvindt
+            item {
+                SettingsSectionCard {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SettingsRoundIcon(Icons.Outlined.Language)
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Taal · Language",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                tr("Taal van de app", "App language"),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    val languages = listOf(
+                        AppLanguage.SYSTEM to tr("Systeem", "System"),
+                        AppLanguage.NL to "Nederlands",
+                        AppLanguage.EN to "English"
+                    )
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        languages.forEachIndexed { index, (language, label) ->
+                            SegmentedButton(
+                                selected = language == selectedLanguage,
+                                onClick = { onSelectLanguage?.invoke(language) },
+                                shape = SegmentedButtonDefaults.itemShape(index, languages.size)
+                            ) {
+                                Text(label, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
+
             // 2. Hardware Volume Control Card
             item {
                 val selectedVolumeCount = players.count { p ->
@@ -519,8 +567,8 @@ fun SettingsScreen(
                 }
 
                 SettingsActionCard(
-                    title = "Hardware Volumeknoppen",
-                    subtitle = "Bedien de fysieke volumeknoppen van je telefoon ($selectedVolumeCount actief)",
+                    title = tr("Hardware Volumeknoppen", "Hardware volume buttons"),
+                    subtitle = tr("Bedien de fysieke volumeknoppen van je telefoon ($selectedVolumeCount actief)", "Use your phone's physical volume buttons ($selectedVolumeCount active)"),
                     icon = Icons.AutoMirrored.Outlined.VolumeUp,
                     badgeText = "$selectedVolumeCount / ${players.size}",
                     onClick = { showVolumePlayers = true }
@@ -551,13 +599,13 @@ fun SettingsScreen(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Locaties & Geofencing",
+                                    tr("Locaties & Geofencing", "Locations & geofencing"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    activeLocationName?.let { "Actief: $it" }
-                                        ?: "Thuislocatie bepalen om slimme spelerfiltering in te schakelen",
+                                    activeLocationName?.let { tr("Actief: $it", "Active: $it") }
+                                        ?: tr("Thuislocatie bepalen om slimme spelerfiltering in te schakelen", "Set a home location to enable smart player filtering"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -567,7 +615,7 @@ fun SettingsScreen(
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 if (locationsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                contentDescription = if (locationsExpanded) "Locaties inklappen" else "Locaties uitklappen"
+                                contentDescription = if (locationsExpanded) tr("Locaties inklappen", "Collapse locations") else tr("Locaties uitklappen", "Expand locations")
                             )
                         }
                     }
@@ -608,7 +656,7 @@ fun SettingsScreen(
                                         val coordsText = if (lat != null && lon != null)
                                             "GPS: ${"%.4f".format(lat)}, ${"%.4f".format(lon)}"
                                         else
-                                            "Geen GPS coördinaten ingesteld"
+                                            tr("Geen GPS coördinaten ingesteld", "No GPS coordinates set")
                                         Text(
                                             coordsText,
                                             style = MaterialTheme.typography.bodySmall,
@@ -619,7 +667,7 @@ fun SettingsScreen(
                                         IconButton(onClick = { onDeleteLocation(loc.id) }) {
                                             Icon(
                                                 Icons.Default.DeleteOutline,
-                                                contentDescription = "Verwijderen",
+                                                contentDescription = tr("Verwijderen", "Delete"),
                                                 tint = MaterialTheme.colorScheme.error
                                             )
                                         }
@@ -641,7 +689,7 @@ fun SettingsScreen(
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Locatie")
+                                Text(tr("Locatie", "Location"))
                             }
 
                             Button(
@@ -660,10 +708,10 @@ fun SettingsScreen(
                             localPlayerIds.contains(p.id) || localPlayerIds.contains(p.name.lowercase().trim())
                         }
                         SettingsActionRow(
-                            title = "Thuislocatie Filter (150m)",
-                            subtitle = "Lokale speakers verbergen wanneer je buitenshuis bent",
+                            title = tr("Thuislocatie Filter (150m)", "Home location filter (150m)"),
+                            subtitle = tr("Lokale speakers verbergen wanneer je buitenshuis bent", "Hide local speakers when you're away from home"),
                             icon = Icons.Outlined.HomeWork,
-                            badgeText = "$localCount lokaal",
+                            badgeText = tr("$localCount lokaal", "$localCount local"),
                             onClick = { showLocalPlayers = true }
                         )
                     }
@@ -696,12 +744,12 @@ fun SettingsScreen(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Spelers",
+                                    tr("Spelers", "Players"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "Keuzelijst, roepnamen, vaste spelers en disco ($visibleCount / ${players.size} zichtbaar)",
+                                    tr("Keuzelijst, roepnamen, vaste spelers en disco ($visibleCount / ${players.size} zichtbaar)", "Player list, nicknames, pinned players and disco ($visibleCount / ${players.size} visible)"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -711,7 +759,7 @@ fun SettingsScreen(
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 if (playersExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                contentDescription = if (playersExpanded) "Speler-opties inklappen" else "Speler-opties uitklappen"
+                                contentDescription = if (playersExpanded) tr("Speler-opties inklappen", "Collapse player options") else tr("Speler-opties uitklappen", "Expand player options")
                             )
                         }
                     }
@@ -720,8 +768,8 @@ fun SettingsScreen(
                         Spacer(Modifier.height(8.dp))
 
                         SettingsActionRow(
-                            title = "Spelers in Keuzelijst",
-                            subtitle = "Verberg of toon specifieke spelers in het hoofdmenu",
+                            title = tr("Spelers in Keuzelijst", "Players in list"),
+                            subtitle = tr("Verberg of toon specifieke spelers in het hoofdmenu", "Hide or show specific players in the main menu"),
                             icon = Icons.Outlined.Visibility,
                             badgeText = "$visibleCount / ${players.size}",
                             onClick = { showHiddenPlayers = true }
@@ -740,13 +788,13 @@ fun SettingsScreen(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Toon verborgen spelers",
+                                    tr("Toon verborgen spelers", "Show hidden players"),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    if (showMaHiddenPlayers) "Aan: ook spelers die in Music Assistant verborgen zijn"
-                                    else "Uit: spelers die in Music Assistant verborgen zijn, staan niet in de keuzelijst",
+                                    if (showMaHiddenPlayers) tr("Aan: ook spelers die in Music Assistant verborgen zijn", "On: also players that are hidden in Music Assistant")
+                                    else tr("Uit: spelers die in Music Assistant verborgen zijn, staan niet in de keuzelijst", "Off: players that are hidden in Music Assistant are not in the player list"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -760,29 +808,29 @@ fun SettingsScreen(
 
                         val aliasedCount = players.count { p -> !playerAliases[p.id].isNullOrBlank() }
                         SettingsActionRow(
-                            title = "Speler Roepnamen (Aliassen)",
-                            subtitle = "Geef speakers een aangepaste weergavenaam",
+                            title = tr("Speler Roepnamen (Aliassen)", "Player nicknames (aliases)"),
+                            subtitle = tr("Geef speakers een aangepaste weergavenaam", "Give speakers a custom display name"),
                             icon = Icons.Outlined.Edit,
-                            badgeText = if (aliasedCount > 0) "$aliasedCount actief" else "Instellen",
+                            badgeText = if (aliasedCount > 0) tr("$aliasedCount actief", "$aliasedCount active") else tr("Instellen", "Set up"),
                             onClick = { showAliases = true }
                         )
 
                         // Vaste spelers (nooit onder "Overige spelers")
                         val pinnedCount = players.count { it.id in pinnedPlayerIds }
                         SettingsActionRow(
-                            title = "Vaste Spelers",
-                            subtitle = "Altijd bovenin de keuzelijst, nooit onder \"Overige spelers\"",
+                            title = tr("Vaste Spelers", "Pinned players"),
+                            subtitle = tr("Altijd bovenin de keuzelijst, nooit onder \"Overige spelers\"", "Always at the top of the player list, never under \"Other players\""),
                             icon = Icons.Outlined.PushPin,
-                            badgeText = if (pinnedCount > 0) "$pinnedCount vast" else "Instellen",
+                            badgeText = if (pinnedCount > 0) tr("$pinnedCount vast", "$pinnedCount pinned") else tr("Instellen", "Set up"),
                             onClick = { showPinnedPlayers = true }
                         )
 
                         val discoName = players.firstOrNull { it.id == discoPlayerId }?.name
                         SettingsActionRow(
-                            title = "Disco-speler",
-                            subtitle = discoName ?: "Speler die de disco-schakelaar aan de groep toevoegt",
+                            title = tr("Disco-speler", "Disco player"),
+                            subtitle = discoName ?: tr("Speler die de disco-schakelaar aan de groep toevoegt", "Player that the disco switch adds to the group"),
                             icon = Icons.Outlined.Lightbulb,
-                            badgeText = if (discoName != null) "Gekozen" else "Instellen",
+                            badgeText = if (discoName != null) tr("Gekozen", "Selected") else tr("Instellen", "Set up"),
                             onClick = { showDiscoPlayer = true }
                         )
                     }
@@ -809,7 +857,7 @@ fun SettingsScreen(
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Ontwikkeld door Jeroen van Sonsbeek",
+                        tr("Ontwikkeld door Jeroen van Sonsbeek", "Developed by Jeroen van Sonsbeek"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -822,18 +870,18 @@ fun SettingsScreen(
     if (showAddLocation) {
         AlertDialog(
             onDismissRequest = { showAddLocation = false },
-            title = { Text("Nieuwe Locatie Toevoegen") },
+            title = { Text(tr("Nieuwe Locatie Toevoegen", "Add new location")) },
             text = {
                 Column {
                     Text(
-                        "Geef een naam op voor deze locatie (bijv. 'Thuis', 'Kantoor' of 'Vakantiehuis'):",
+                        tr("Geef een naam op voor deze locatie (bijv. 'Thuis', 'Kantoor' of 'Vakantiehuis'):", "Enter a name for this location (e.g. 'Home', 'Office' or 'Holiday home'):"),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = newLocationName,
                         onValueChange = { newLocationName = it },
-                        placeholder = { Text("Locatienaam") },
+                        placeholder = { Text(tr("Locatienaam", "Location name")) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
@@ -850,12 +898,12 @@ fun SettingsScreen(
                         }
                     }
                 ) {
-                    Text("Toevoegen")
+                    Text(tr("Toevoegen", "Add"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddLocation = false }) {
-                    Text("Annuleren")
+                    Text(tr("Annuleren", "Cancel"))
                 }
             }
         )
@@ -864,8 +912,8 @@ fun SettingsScreen(
     // Modal Bottom Sheet helper functions
     if (showVolumePlayers) {
         PlayerChecklistSheet(
-            title = "Hardware Volume Bediening",
-            subtitle = "Kies voor welke spelers de volumeknoppen van je telefoon actief zijn:",
+            title = tr("Hardware Volume Bediening", "Hardware volume control"),
+            subtitle = tr("Kies voor welke spelers de volumeknoppen van je telefoon actief zijn:", "Choose which players your phone's volume buttons control:"),
             players = players,
             isChecked = { p ->
                 volumeControlPlayerIds.contains(p.id) ||
@@ -878,8 +926,8 @@ fun SettingsScreen(
 
     if (showLocalPlayers) {
         PlayerChecklistSheet(
-            title = "Lokale Thuis-Spelers",
-            subtitle = "Kies welke spelers verborgen moeten worden als je meer dan 150m van huis bent:",
+            title = tr("Lokale Thuis-Spelers", "Local home players"),
+            subtitle = tr("Kies welke spelers verborgen moeten worden als je meer dan 150m van huis bent:", "Choose which players to hide when you're more than 150m from home:"),
             players = players,
             isChecked = { p ->
                 localPlayerIds.contains(p.id) ||
@@ -892,8 +940,8 @@ fun SettingsScreen(
 
     if (showHiddenPlayers) {
         PlayerChecklistSheet(
-            title = "Spelers in Keuzelijst",
-            subtitle = "Vink aan welke spelers zichtbaar zijn in het speler-keuzemenu:",
+            title = tr("Spelers in Keuzelijst", "Players in list"),
+            subtitle = tr("Vink aan welke spelers zichtbaar zijn in het speler-keuzemenu:", "Check which players are visible in the player menu:"),
             players = players,
             isChecked = { p ->
                 !(hiddenPlayerIds.contains(p.id) ||
@@ -906,8 +954,8 @@ fun SettingsScreen(
 
     if (showPinnedPlayers) {
         PlayerChecklistSheet(
-            title = "Vaste Spelers",
-            subtitle = "Groepsleden en lichtspelers staan in de keuzelijst onder \"Overige spelers\". Vink aan welke toch altijd bovenin moeten staan:",
+            title = tr("Vaste Spelers", "Pinned players"),
+            subtitle = tr("Groepsleden en lichtspelers staan in de keuzelijst onder \"Overige spelers\". Vink aan welke toch altijd bovenin moeten staan:", "Group members and light players are listed under \"Other players\". Check which ones should always be at the top:"),
             players = players,
             isChecked = { p -> p.id in pinnedPlayerIds },
             onToggle = { onTogglePinnedPlayer?.invoke(it.id) },
@@ -917,8 +965,8 @@ fun SettingsScreen(
 
     if (showDiscoPlayer) {
         PlayerChecklistSheet(
-            title = "Disco-speler",
-            subtitle = "Kies welke speler de disco-schakelaar aan de huidige groep toevoegt:",
+            title = tr("Disco-speler", "Disco player"),
+            subtitle = tr("Kies welke speler de disco-schakelaar aan de huidige groep toevoegt:", "Choose which player the disco switch adds to the current group:"),
             players = players,
             isChecked = { p -> p.id == discoPlayerId },
             onToggle = {
@@ -944,16 +992,16 @@ fun SettingsScreen(
                     Icon(Icons.Outlined.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        "Speler Roepnamen",
+                        tr("Speler Roepnamen", "Player nicknames"),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = { showAliases = false }) {
-                        Icon(Icons.Default.Close, contentDescription = "Sluiten")
+                        Icon(Icons.Default.Close, contentDescription = tr("Sluiten", "Close"))
                     }
                 }
                 Text(
-                    "Stel een vriendelijke roepnaam in per speaker voor in de app:",
+                    tr("Stel een vriendelijke roepnaam in per speaker voor in de app:", "Set a friendly nickname per speaker for use in the app:"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -966,7 +1014,7 @@ fun SettingsScreen(
                     items(players) { player ->
                         Column {
                             Text(
-                                "Originele naam: ${player.name}",
+                                tr("Originele naam: ${player.name}", "Original name: ${player.name}"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1162,7 +1210,7 @@ private fun PlayerChecklistSheet(
                 )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Sluiten")
+                    Icon(Icons.Default.Close, contentDescription = tr("Sluiten", "Close"))
                 }
             }
             Text(

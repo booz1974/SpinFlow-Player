@@ -41,6 +41,7 @@ private val KEY_SENDSPIN_CLIENT_NAME = stringPreferencesKey("sendspin_client_nam
 private val KEY_SENDSPIN_ENABLED = booleanPreferencesKey("sendspin_enabled")
 private val KEY_SENDSPIN_LOCAL_URL = stringPreferencesKey("sendspin_local_url")
 private val KEY_SENDSPIN_AUDIO_QUALITY = stringPreferencesKey("sendspin_audio_quality")
+private val KEY_LANGUAGE = stringPreferencesKey("app_language")
 
 /** Vroegere vaste standaardnaam; wie die nog opgeslagen heeft, krijgt voortaan de naam met toestelmodel. */
 private const val LEGACY_SENDSPIN_CLIENT_NAME = "Spinflow telefoon"
@@ -198,7 +199,7 @@ class SettingsStore(private val context: Context) {
     private fun parseLocations(json: String?, oldLat: Double?, oldLon: Double?): List<MassLocation> {
         if (json.isNullOrBlank()) {
             // Migratie van oude enkele locatie (coords blijven null als ze er nooit waren)
-            return listOf(MassLocation("default", "Thuis", oldLat, oldLon))
+            return listOf(MassLocation("default", tr("Thuis", "Home"), oldLat, oldLon))
         }
         return try {
             val arr = org.json.JSONArray(json)
@@ -214,7 +215,7 @@ class SettingsStore(private val context: Context) {
             }
             list
         } catch (e: Exception) {
-            listOf(MassLocation("default", "Thuis", oldLat, oldLon))
+            listOf(MassLocation("default", tr("Thuis", "Home"), oldLat, oldLon))
         }
     }
 
@@ -350,6 +351,15 @@ class SettingsStore(private val context: Context) {
     suspend fun saveTheme(themeName: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_THEME] = themeName
+        }
+    }
+
+    suspend fun loadLanguage(): AppLanguage =
+        AppLanguage.fromKey(context.dataStore.data.first()[KEY_LANGUAGE])
+
+    suspend fun saveLanguage(language: AppLanguage) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_LANGUAGE] = language.name
         }
     }
 

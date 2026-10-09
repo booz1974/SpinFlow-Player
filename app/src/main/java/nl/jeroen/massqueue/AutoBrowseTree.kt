@@ -38,7 +38,7 @@ class AutoBrowseTree(private val api: suspend () -> MassApiClient?) {
         return when (parentId) {
             ROOT -> listOf(favoritesFolder(), radioFolder())
             FAVORITES -> client.getFavoritePlaylists().map {
-                playable(it.uri, it.name, it.trackCount?.let { n -> "$n nummers" }, it.imagePath, MediaMetadata.MEDIA_TYPE_PLAYLIST)
+                playable(it.uri, it.name, it.trackCount?.let { n -> tr("$n nummers", "$n tracks") }, it.imagePath, MediaMetadata.MEDIA_TYPE_PLAYLIST)
             }
             RADIO -> client.getFavoriteRadios().map {
                 playable(it.uri, it.name, null, it.imagePath, MediaMetadata.MEDIA_TYPE_RADIO_STATION)
@@ -49,8 +49,8 @@ class AutoBrowseTree(private val api: suspend () -> MassApiClient?) {
 
     suspend fun search(query: String): List<MediaItem> {
         val r = api()?.search(query) ?: return emptyList()
-        return r.tracks.map { playable(it.uri, it.title, it.subtitle, it.imagePath, MediaMetadata.MEDIA_TYPE_MUSIC, "Nummers") } +
-            r.artists.map { playable(it.uri, it.name, null, it.imagePath, MediaMetadata.MEDIA_TYPE_ARTIST, "Artiesten") } +
+        return r.tracks.map { playable(it.uri, it.title, it.subtitle, it.imagePath, MediaMetadata.MEDIA_TYPE_MUSIC, tr("Nummers", "Tracks")) } +
+            r.artists.map { playable(it.uri, it.name, null, it.imagePath, MediaMetadata.MEDIA_TYPE_ARTIST, tr("Artiesten", "Artists")) } +
             r.albums.map { playable(it.uri, it.name, it.subtitle, it.imagePath, MediaMetadata.MEDIA_TYPE_ALBUM, "Albums") } +
             r.playlists.map { playable(it.uri, it.name, null, it.imagePath, MediaMetadata.MEDIA_TYPE_PLAYLIST, "Playlists") }
     }
@@ -76,7 +76,7 @@ class AutoBrowseTree(private val api: suspend () -> MassApiClient?) {
             ?: r.albums.firstOrNull()?.uri
     }
 
-    private fun favoritesFolder() = folder(FAVORITES, "Favorieten", MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS)
+    private fun favoritesFolder() = folder(FAVORITES, tr("Favorieten", "Favorites"), MediaMetadata.MEDIA_TYPE_FOLDER_PLAYLISTS)
     private fun radioFolder() = folder(RADIO, "Radio", MediaMetadata.MEDIA_TYPE_FOLDER_RADIO_STATIONS)
 
     private fun folder(id: String, title: String, type: Int) = MediaItem.Builder()

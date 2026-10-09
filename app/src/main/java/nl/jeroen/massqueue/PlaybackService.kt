@@ -159,7 +159,7 @@ class PlaybackService : Service() {
             .setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentTitle(np?.title ?: getString(R.string.app_name))
-            .setContentText(np?.artist ?: "Verbinden…")
+            .setContentText(np?.artist ?: tr("Verbinden…", "Connecting…"))
             .setDeleteIntent(
                 MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP)
             )
@@ -171,16 +171,16 @@ class PlaybackService : Service() {
 
         if (np != null) {
             builder.addAction(
-                action(android.R.drawable.ic_media_previous, "Vorige", PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
+                action(android.R.drawable.ic_media_previous, tr("Vorige", "Previous"), PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS)
             )
             builder.addAction(
                 if (np.isPlaying)
-                    action(android.R.drawable.ic_media_pause, "Pauze", PlaybackStateCompat.ACTION_PLAY_PAUSE)
+                    action(android.R.drawable.ic_media_pause, tr("Pauze", "Pause"), PlaybackStateCompat.ACTION_PLAY_PAUSE)
                 else
-                    action(android.R.drawable.ic_media_play, "Afspelen", PlaybackStateCompat.ACTION_PLAY_PAUSE)
+                    action(android.R.drawable.ic_media_play, tr("Afspelen", "Play"), PlaybackStateCompat.ACTION_PLAY_PAUSE)
             )
             builder.addAction(
-                action(android.R.drawable.ic_media_next, "Volgende", PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
+                action(android.R.drawable.ic_media_next, tr("Volgende", "Next"), PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
             )
             mediaStyle.setShowActionsInCompactView(0, 1, 2)
         }
@@ -227,7 +227,7 @@ class PlaybackService : Service() {
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL, "Afspelen", NotificationManager.IMPORTANCE_LOW
+                CHANNEL, tr("Afspelen", "Play"), NotificationManager.IMPORTANCE_LOW
             ).apply {
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC

@@ -78,7 +78,7 @@ import java.util.concurrent.TimeUnit
 data class PhonePlayerStatus(
     val running: Boolean = false,
     /** Korte statustekst voor Instellingen, bv. "Verbonden (lokaal)". */
-    val text: String = "Uit",
+    val text: String = tr("Uit", "Off"),
     val clientId: String? = null,
     val isError: Boolean = false
 )
@@ -182,7 +182,7 @@ class SendspinPlaybackService : MediaLibraryService() {
             this, carConnectionReceiver, IntentFilter(CAR_CONNECTION_ACTION), ContextCompat.RECEIVER_EXPORTED
         )
 
-        publish(PhonePlayerStatus(running = true, text = "Starten…"))
+        publish(PhonePlayerStatus(running = true, text = tr("Starten…", "Starting…")))
         scope.launch {
             val s = SettingsStore(applicationContext).loadSendspin()
             settings = s
@@ -357,9 +357,9 @@ class SendspinPlaybackService : MediaLibraryService() {
                 clientMobile = mobile
             }
             val url = urls[attempt % urls.size]
-            val where = if (url == settings.externalUrl) "via server-adres" else "lokaal"
-            publish(PhonePlayerStatus(true, "Verbinden ($where)…", settings.clientId))
-            sessionPlayer.setIdleText("Verbinden met Music Assistant…")
+            val where = if (url == settings.externalUrl) tr("via server-adres", "via server address") else tr("lokaal", "local")
+            publish(PhonePlayerStatus(true, tr("Verbinden ($where)…", "Connecting ($where)…"), settings.clientId))
+            sessionPlayer.setIdleText(tr("Verbinden met Music Assistant…", "Connecting to Music Assistant…"))
             c.disconnect("switch")
             c.connect(url)
 
@@ -369,10 +369,10 @@ class SendspinPlaybackService : MediaLibraryService() {
             }
             if (result in connected) {
                 failedRounds = 0
-                publish(PhonePlayerStatus(true, "Verbonden ($where)", settings.clientId))
-                sessionPlayer.setIdleText("Verbonden met Music Assistant")
+                publish(PhonePlayerStatus(true, tr("Verbonden ($where)", "Connected ($where)"), settings.clientId))
+                sessionPlayer.setIdleText(tr("Verbonden met Music Assistant", "Connected to Music Assistant"))
                 c.state.first { it in lost }
-                publish(PhonePlayerStatus(true, "Verbinding kwijt, opnieuw proberen…", settings.clientId))
+                publish(PhonePlayerStatus(true, tr("Verbinding kwijt, opnieuw proberen…", "Connection lost, retrying…"), settings.clientId))
                 delay(RECONNECT_DELAY_MS)
                 attempt = 0
             } else {
@@ -380,8 +380,8 @@ class SendspinPlaybackService : MediaLibraryService() {
                 if (attempt % urls.size == 0) {
                     failedRounds++
                     val reason = authClient?.lastRejection?.let { ": $it" }.orEmpty()
-                    publish(PhonePlayerStatus(true, "Geen verbinding met MA$reason", settings.clientId, isError = true))
-                    sessionPlayer.setIdleText("Geen verbinding met Music Assistant")
+                    publish(PhonePlayerStatus(true, tr("Geen verbinding met MA$reason", "No connection to MA$reason"), settings.clientId, isError = true))
+                    sessionPlayer.setIdleText(tr("Geen verbinding met Music Assistant", "No connection to Music Assistant"))
                     delay((RETRY_BASE_MS shl (failedRounds - 1).coerceAtMost(4)).coerceAtMost(RETRY_MAX_MS))
                 }
             }
@@ -649,7 +649,7 @@ class SendspinPlaybackService : MediaLibraryService() {
         val favorited = currentUri != null && currentUri == favoritedUri
         return listOf(
             CommandButton.Builder(if (shuffle) CommandButton.ICON_SHUFFLE_ON else CommandButton.ICON_SHUFFLE_OFF)
-                .setDisplayName(if (shuffle) "Shuffle uit" else "Shuffle aan")
+                .setDisplayName(if (shuffle) tr("Shuffle uit", "Shuffle off") else tr("Shuffle aan", "Shuffle on"))
                 .setSessionCommand(CMD_SHUFFLE)
                 .build(),
             CommandButton.Builder(
@@ -659,11 +659,11 @@ class SendspinPlaybackService : MediaLibraryService() {
                     else -> CommandButton.ICON_REPEAT_OFF
                 }
             )
-                .setDisplayName("Herhalen")
+                .setDisplayName(tr("Herhalen", "Repeat"))
                 .setSessionCommand(CMD_REPEAT)
                 .build(),
             CommandButton.Builder(if (favorited) CommandButton.ICON_HEART_FILLED else CommandButton.ICON_HEART_UNFILLED)
-                .setDisplayName("Favoriet maken")
+                .setDisplayName(tr("Favoriet maken", "Add to favorites"))
                 .setSessionCommand(CMD_FAVORITE)
                 .setEnabled(currentUri != null)
                 .build()
@@ -932,8 +932,8 @@ class SendspinPlaybackService : MediaLibraryService() {
     private fun placeholderNotification(): Notification =
         NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_media)
-            .setContentTitle(getString(R.string.sendspin_channel_name))
-            .setContentText("Verbinden met Music Assistant…")
+            .setContentTitle(tr("Telefoon als speler", "Phone as player"))
+            .setContentText(tr("Verbinden met Music Assistant…", "Connecting to Music Assistant…"))
             .setOngoing(true)
             .build()
 
@@ -948,7 +948,7 @@ class SendspinPlaybackService : MediaLibraryService() {
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL, getString(R.string.sendspin_channel_name), NotificationManager.IMPORTANCE_LOW
+                CHANNEL, tr("Telefoon als speler", "Phone as player"), NotificationManager.IMPORTANCE_LOW
             ).apply {
                 setShowBadge(false)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
