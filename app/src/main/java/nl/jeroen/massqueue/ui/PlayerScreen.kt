@@ -94,6 +94,10 @@ import nl.jeroen.massqueue.MassSearchResults
 import nl.jeroen.massqueue.MassTrack
 import nl.jeroen.massqueue.MassViewModel
 import nl.jeroen.massqueue.QueueTrack
+import nl.jeroen.massqueue.ArtistInfo
+import nl.jeroen.massqueue.largeImageUrl
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import nl.jeroen.massqueue.R
 import nl.jeroen.massqueue.RadioHistoryEntry
 import nl.jeroen.massqueue.UiState
@@ -705,6 +709,8 @@ fun PlayerScreen(
                                 autoplayEnabled = queue.autoplayEnabled,
                                 onToggleCrossfade = { viewModel.toggleCrossfade() },
                                 onToggleAutoplay = { viewModel.toggleAutoplay() },
+                                onLoadArtistInfo = { viewModel.fetchArtistInfo(it) },
+                                onLoadSongStory = { viewModel.fetchSongStory(it) },
                                 // Alleen als deze telefoon de gekozen speler is
                                 streamFormatLabel = phoneStreamFormat?.takeIf {
                                     state.players.firstOrNull { p -> p.id == state.selectedPlayerId }
@@ -2059,8 +2065,21 @@ private fun NowPlayingHero(
     autoplayEnabled: Boolean,
     onToggleCrossfade: () -> Unit,
     onToggleAutoplay: () -> Unit,
+    onLoadArtistInfo: (suspend (QueueTrack) -> ArtistInfo?)? = null,
+    onLoadSongStory: (suspend (QueueTrack) -> String?)? = null,
     streamFormatLabel: String? = null
 ) {
+    var showArtworkInfo by remember { mutableStateOf(false) }
+    if (showArtworkInfo && track != null && onLoadArtistInfo != null) {
+        ArtworkInfoDialog(
+            track = track,
+            fallbackTerm = fallbackTerm,
+            onLoadArtistInfo = onLoadArtistInfo,
+            onLoadSongStory = onLoadSongStory,
+            onDismiss = { showArtworkInfo = false }
+        )
+    }
+
     val songArt = track?.streamImage?.takeIf { it.isNotBlank() }
     val stationArt = track?.imagePath?.takeIf { it.isNotBlank() }
     val hasSongInfo = track?.hasStreamInfo == true
@@ -2104,7 +2123,11 @@ private fun NowPlayingHero(
                     modifier = Modifier
                         .size(64.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        // Tik op de hoes: groot venster met hoes en artiestinfo
+                        .clickable(enabled = track != null && onLoadArtistInfo != null) {
+                            showArtworkInfo = true
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     if (track?.isAiRadio == true) {
@@ -2327,6 +2350,195 @@ private fun NowPlayingHero(
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
+                }
+            }
+        }
+    }
+}
+
+/** Groot venster na een tik op de hoes: de hoes zelf, nummerinfo en informatie over de artiest. */
+@Composable
+private fun ArtworkInfoDialog(
+    track: QueueTrack,
+    fallbackTerm: String?,
+    onLoadArtistInfo: suspend (QueueTrack) -> ArtistInfo?,
+    onLoadSongStory: (suspend (QueueTrack) -> String?)?,
+    onDismiss: () -> Unit
+) {
+    val hasStreamInfo = track.hasStreamInfo
+    val art = (if (hasStreamInfo) track.streamImage else null)?.takeIf { it.isNotBlank() }
+        ?: track.imagePath?.takeIf { it.isNotBlank() && !hasStreamInfo }
+    val title = if (hasStreamInfo) track.streamTrack ?: track.title else track.title
+    val artistName = if (hasStreamInfo) track.streamArtist else track.artist
+    val album = if (hasStreamInfo) track.streamAlbum else track.album
+
+    // Opnieuw laden zodra er een ander nummer/andere artiest speelt terwijl het venster open is
+    val artistKey = listOf(track.artistUri, artistName)
+    var loading by remember(artistKey) { mutableStateOf(true) }
+    val info by produceState<ArtistInfo?>(initialValue = null, artistKey) {
+        loading = true
+        value = if (artistName.isNullOrBlank() && track.artistUri == null) null else onLoadArtistInfo(track)
+        loading = false
+    }
+
+    // Weetje over het nummer; het blok verschijnt alleen als er echt iets gevonden is
+    val songKey = listOf(title, artistName)
+    var storyLoading by remember(songKey) { mutableStateOf(onLoadSongStory != null) }
+    val songStory by produceState<String?>(initialValue = null, songKey) {
+        storyLoading = true
+        value = onLoadSongStory?.invoke(track)
+        storyLoading = false
+    }
+
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    MassImage(
+                        model = art?.let(::largeImageUrl),
+                        fallbackTerm = if (art == null) fallbackTerm else null,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                    ) {
+                        Icon(Icons.Filled.Close, contentDescription = tr("Sluiten", "Close"), tint = Color.White)
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (!artistName.isNullOrBlank()) {
+                    Text(
+                        artistName,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                }
+                val albumLine = listOfNotNull(album?.takeIf { it.isNotBlank() }, track.year?.toString())
+                    .joinToString(" · ")
+                if (albumLine.isNotBlank()) {
+                    Text(
+                        albumLine,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(12.dp))
+
+                Text(
+                    tr("Over de artiest", "About the artist"),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(8.dp))
+
+                val current = info
+                when {
+                    loading -> Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    }
+                    current == null -> Text(
+                        tr("Geen artiestinfo gevonden.", "No artist info found."),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    else -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (current.imagePath != null) {
+                                MassImage(
+                                    model = current.imagePath,
+                                    modifier = Modifier.size(56.dp).clip(CircleShape)
+                                )
+                                Spacer(Modifier.width(12.dp))
+                            }
+                            Column {
+                                Text(
+                                    current.name,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (current.genres.isNotEmpty()) {
+                                    Text(
+                                        current.genres.take(4).joinToString(", "),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            current.description ?: tr("Geen biografie beschikbaar.", "No biography available."),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (current.description != null) 0.9f else 0.6f)
+                        )
+                        if (current.source != null && current.description != null) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                tr("Bron: ${current.source}", "Source: ${current.source}"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                }
+
+                val story = songStory
+                if (storyLoading || story != null) {
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        tr("Over het nummer", "About the song"),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    if (story == null) {
+                        Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        }
+                    } else {
+                        Text(
+                            story,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            tr("Bron: Wikipedia", "Source: Wikipedia"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
         }

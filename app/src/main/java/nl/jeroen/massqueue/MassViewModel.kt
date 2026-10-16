@@ -64,6 +64,11 @@ class MassViewModel : ViewModel() {
      */
     private var pendingRadioResumeUri: String? = null
     private var pendingRadioResumeSetAt: Long = 0L
+    /**
+     * Zolang de gebruiker nog niet zelf een speler gekozen heeft, kiest de app de eigen
+     * telefoon zodra die in de spelerslijst verschijnt (ook als er eerst een andere gekozen was).
+     */
+    private var userPickedPlayer = false
 
     private var onSavePlaylist: (suspend (String?, String?) -> Unit)? = null
     private var onSaveLocations: (suspend (List<MassLocation>, String) -> Unit)? = null
@@ -304,6 +309,7 @@ class MassViewModel : ViewModel() {
     }
 
     fun selectPlayer(playerId: String) {
+        userPickedPlayer = true
         _uiState.update { it.copy(selectedPlayerId = playerId, queue = null) }
         tickOnce()
     }
@@ -418,6 +424,7 @@ class MassViewModel : ViewModel() {
             // Bepaal welke speler geselecteerd is. Bij het (opnieuw) kiezen van een standaard-speler
             // (geen geldige eerdere selectie) volgen we dezelfde prioriteit als de dropdown:
             // eerst een speler die nu speelt, anders een speler met een geladen wachtrij.
+            // Heeft de gebruiker nog niets gekozen, dan gaat de eigen telefoon altijd voor.
             fun isPlayingNow(id: String) =
                 filteredPlayers.find { it.id == id }?.playbackState?.lowercase() == "playing" ||
                     queueSummaries[id]?.isPlaying == true
@@ -426,7 +433,8 @@ class MassViewModel : ViewModel() {
             val candidates = filteredPlayers.filter { currentState.isPlayerListed(it) }
             val playingId = candidates.firstOrNull { isPlayingNow(it.id) }?.id
             val queuedId = candidates.firstOrNull { queueSummaries[it.id]?.hasItems == true }?.id
-            val selected = currentState.selectedPlayerId?.let { id ->
+            val ownId = filteredPlayers.firstOrNull { currentState.isOwnPlayer(it) }?.id
+            val selected = (if (!userPickedPlayer) ownId else null) ?: currentState.selectedPlayerId?.let { id ->
                 if (filteredPlayers.any { it.id == id }) id else null
             } ?: playingId ?: queuedId ?: candidates.firstOrNull()?.id
 
@@ -902,6 +910,32 @@ class MassViewModel : ViewModel() {
         _uiState.update { it.copy(phonePlayerClientId = clientId) }
     }
 
+    /** Artiestinfo voor het hoes-venster; bij radio op basis van de live stream-artiest. */
+    suspend fun fetchArtistInfo(track: QueueTrack): ArtistInfo? {
+        val c = client ?: return null
+        return try {
+            if (track.hasStreamInfo) c.getArtistInfo(null, track.streamArtist)
+            else c.getArtistInfo(track.artistUri, track.artist)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Weetje/achtergrond bij het nu spelende nummer (Wikipedia), of null als er niets is. */
+    suspend fun fetchSongStory(track: QueueTrack): String? {
+        val c = client ?: return null
+        return try {
+            if (track.hasStreamInfo) c.getSongStory(track.streamTrack, track.streamArtist)
+            else c.getSongStory(track.title, track.artist)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     /** Voegt de Hue-discospeler toe aan (of haalt hem uit) de groep die nu geselecteerd is. */
     fun setDisco(on: Boolean) {
         val state = _uiState.value
@@ -996,6 +1030,7 @@ class MassViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 client?.transferQueue(sourceId, targetPlayerId)
+                userPickedPlayer = true
                 _uiState.update { it.copy(selectedPlayerId = targetPlayerId) }
                 refreshAfterCommand()
             } catch (e: Exception) {

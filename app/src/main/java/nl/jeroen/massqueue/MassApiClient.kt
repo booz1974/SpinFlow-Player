@@ -534,8 +534,188 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
             streamAlbum = stream?.album,
             streamImage = stream?.image,
             year = extractYear(media),
-            artist = artistNames.joinToString(", ").takeIf { it.isNotBlank() }
+            artist = artistNames.joinToString(", ").takeIf { it.isNotBlank() },
+            artistUri = artists?.optJSONObject(0)?.optString("uri")?.takeIf { it.isNotBlank() },
+            album = albumName?.takeIf { it.isNotBlank() }
         )
+    }
+
+    /**
+     * Artiestinfo voor het hoes-venster. Eerst Music Assistant (via de artiest-URI, of anders een
+     * zoekopdracht op de exacte naam, bv. bij radio); ontbreekt daar een biografie, dan Wikipedia.
+     */
+    suspend fun getArtistInfo(artistUri: String?, artistName: String?): ArtistInfo? {
+        val name = artistName?.substringBefore(",")?.trim()?.takeIf { it.isNotBlank() }
+        var maArtist: JSONObject? = null
+        val uri = artistUri ?: name?.let { n ->
+            try {
+                search(n, limit = 5).artists.firstOrNull { it.name.equals(n, ignoreCase = true) }?.uri
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) { null }
+        }
+        if (uri != null) {
+            maArtist = try {
+                val resp = call("music/item_by_uri", JSONObject().put("uri", uri))
+                resp.optJSONObject("result") ?: resp.takeIf { it.has("name") }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) { null }
+        }
+
+        val meta = maArtist?.optJSONObject("metadata")
+        val finalName = maArtist?.optString("name")?.takeIf { it.isNotBlank() } ?: name ?: return null
+        val maDescription = meta?.optString("description")?.takeIf { it.isNotBlank() && it != "null" }
+        val genres = meta?.optJSONArray("genres")?.let { arr ->
+            (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { g -> g.isNotBlank() } }
+        } ?: emptyList()
+        val maImage = maArtist?.let { resolveImageUrl(it, null) }?.let(::largeImageUrl)
+
+        // MA geeft de biografie in de taal van de server/metadataprovider; alleen gebruiken als
+        // die overeenkomt met de app-taal, anders liever Wikipedia in de juiste taal.
+        val appLang = if (Lang.isEnglish) "en" else "nl"
+        if (maDescription != null && guessLanguage(maDescription) == appLang) {
+            return ArtistInfo(finalName, maDescription, maImage, genres)
+        }
+        val wiki = wikipediaSummary(finalName)
+        return ArtistInfo(
+            name = finalName,
+            description = wiki?.first,
+            imagePath = maImage ?: wiki?.second,
+            genres = genres,
+            source = if (wiki != null) "Wikipedia" else null
+        )
+    }
+
+    /**
+     * Ruwe taalherkenning (nl/en) op basis van veelvoorkomende woordjes, om een MA-biografie
+     * in een andere taal dan de app niet te tonen. Null als het geen van beide duidelijk is.
+     */
+    private fun guessLanguage(text: String): String? {
+        val words = text.lowercase().split(Regex("[^\\p{L}]+"))
+        val nl = setOf("de", "het", "een", "en", "van", "is", "werd", "zijn", "met", "voor", "op", "die", "door", "naar", "ook")
+        val en = setOf("the", "a", "an", "and", "of", "is", "was", "were", "with", "for", "on", "by", "his", "her", "their")
+        val nlCount = words.count { it in nl && it !in en }
+        val enCount = words.count { it in en && it !in nl }
+        return when {
+            nlCount >= 3 && nlCount > enCount * 2 -> "nl"
+            enCount >= 3 && enCount > nlCount * 2 -> "en"
+            else -> null
+        }
+    }
+
+    /**
+     * Samenvatting van Wikipedia in de app-taal. Alleen als het artikel duidelijk over een
+     * muzikant/band gaat, om naamgenoten te vermijden.
+     */
+    private suspend fun wikipediaSummary(name: String): Pair<String, String?>? {
+        val musicWords = listOf(
+            "band", "singer", "musician", "rapper", "songwriter", "dj", "producer", "composer",
+            "group", "duo", "artist", "zanger", "muzikant", "groep", "componist", "muziek", "music"
+        )
+        return wikipediaLookup(
+            candidates = { listOf(name, "$name (band)", "$name (musician)") },
+            accept = { head, _ -> musicWords.any { Regex("\\b$it").containsMatchIn(head) } }
+        )
+    }
+
+    /**
+     * Achtergrondverhaal van een nummer: de Wikipedia-samenvatting van het artikel over dat
+     * nummer, als dat bestaat. Alleen geaccepteerd als het artikel over een nummer/single gaat
+     * én de artiest noemt, zodat we niet het verhaal van een gelijknamig ander nummer tonen.
+     */
+    suspend fun getSongStory(title: String?, artistName: String?): String? {
+        // "Song - Remastered 2011", "Song (feat. X)", "Song [Live]" → "Song"
+        val cleanTitle = title
+            ?.substringBefore(" - ")
+            ?.replace(Regex("\\s*[(\\[].*?[)\\]]"), "")
+            ?.trim()
+            ?.takeIf { it.isNotBlank() } ?: return null
+        val artist = artistName?.substringBefore(",")?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        val songWords = listOf("song", "single", "nummer", "lied", "track", "ballad", "hit")
+        return wikipediaLookup(
+            candidates = { lang ->
+                if (lang == "nl") listOf("$cleanTitle ($artist)", "$cleanTitle (nummer)", "$cleanTitle (single)", cleanTitle)
+                else listOf("$cleanTitle ($artist song)", "$cleanTitle (song)", cleanTitle)
+            },
+            accept = { head, extract ->
+                songWords.any { Regex("\\b$it").containsMatchIn(head) } &&
+                    extract.contains(artist, ignoreCase = true)
+            }
+        )?.first
+    }
+
+    /**
+     * Zoekt op Wikipedia in de app-taal de eerste samenvatting (+ afbeelding) die [accept]
+     * goedkeurt. Eerst de opgegeven titels rechtstreeks; staat het artikel er onder een andere
+     * titel, dan via de taalkoppeling van het Engelse artikel. Nooit tekst in een andere taal.
+     * [accept] krijgt de korte beschrijving + begin van de tekst (lowercase) en de hele samenvatting.
+     */
+    private suspend fun wikipediaLookup(
+        candidates: (lang: String) -> List<String>,
+        accept: (head: String, extract: String) -> Boolean
+    ): Pair<String, String?>? = withContext(Dispatchers.IO) {
+        val lang = if (Lang.isEnglish) "en" else "nl"
+        for (title in candidates(lang)) {
+            wikipediaPage(lang, title, accept)?.let { return@withContext it.second to it.third }
+        }
+        if (lang != "en") {
+            for (title in candidates("en")) {
+                val enTitle = wikipediaPage("en", title, accept)?.first ?: continue
+                val linked = wikipediaLangLink(enTitle, lang) ?: break
+                wikipediaPage(lang, linked, accept)?.let { return@withContext it.second to it.third }
+                break
+            }
+        }
+        null
+    }
+
+    /** Eén Wikipedia-samenvatting: (titel, tekst, afbeelding), of null als die er niet is of [accept] hem afkeurt. */
+    private fun wikipediaPage(
+        lang: String,
+        title: String,
+        accept: (head: String, extract: String) -> Boolean
+    ): Triple<String, String, String?>? = try {
+        val enc = java.net.URLEncoder.encode(title.replace(' ', '_'), "UTF-8").replace("+", "_")
+        val json = wikipediaGet("https://$lang.wikipedia.org/api/rest_v1/page/summary/$enc")
+        val extract = json?.optString("extract")?.takeIf { it.isNotBlank() }
+        if (json == null || extract == null || json.optString("type") == "disambiguation") {
+            null
+        } else {
+            val head = (json.optString("description") + " " + extract.take(300)).lowercase()
+            if (!accept(head, extract)) {
+                null
+            } else {
+                val img = json.optJSONObject("originalimage")?.optString("source")
+                    ?: json.optJSONObject("thumbnail")?.optString("source")
+                Triple(json.optString("title").ifBlank { title }, extract, img?.takeIf { it.isNotBlank() })
+            }
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /** Titel van hetzelfde artikel op de Wikipedia in [lang], via de taalkoppelingen van het Engelse artikel. */
+    private fun wikipediaLangLink(enTitle: String, lang: String): String? = try {
+        val enc = java.net.URLEncoder.encode(enTitle, "UTF-8")
+        val json = wikipediaGet(
+            "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2" +
+                "&prop=langlinks&lllang=$lang&redirects=1&titles=$enc"
+        )
+        json?.optJSONObject("query")?.optJSONArray("pages")?.optJSONObject(0)
+            ?.optJSONArray("langlinks")?.optJSONObject(0)?.optString("title")?.takeIf { it.isNotBlank() }
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun wikipediaGet(url: String): JSONObject? {
+        val req = Request.Builder()
+            .url(url)
+            .header("User-Agent", "SpinFlowPlayer/1.0 (Android)")
+            .build()
+        return client.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) null else JSONObject(resp.body?.string() ?: "{}")
+        }
     }
 
     suspend fun getFavoritePlaylists(): List<MassPlaylist> {

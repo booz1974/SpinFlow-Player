@@ -130,7 +130,10 @@ data class QueueTrack(
     /** Jaar van uitgave, indien Music Assistant dat in de track- of albummetadata meegeeft. */
     val year: Int? = null,
     /** Artiestnaam (los van [subtitle], dat ook het album bevat), voor een iTunes-fallbackzoekopdracht. */
-    val artist: String? = null
+    val artist: String? = null,
+    /** MA-URI van de (eerste) artiest, om artiestinfo op te halen. */
+    val artistUri: String? = null,
+    val album: String? = null
 ) {
     val isAiRadio: Boolean get() = uri?.startsWith("ai_radio://") == true
 
@@ -177,6 +180,19 @@ data class MassTrack(
 )
 
 /** Eén artiest-zoekresultaat uit `music/search`. */
+/** MA's imageproxy levert standaard 256px; voor het grote hoes-venster vragen we meer. */
+fun largeImageUrl(url: String): String = url.replace("size=256", "size=1024")
+
+/** Artiestinfo voor het hoes-venster: biografie uit MA-metadata, anders uit Wikipedia. */
+data class ArtistInfo(
+    val name: String,
+    val description: String?,
+    val imagePath: String?,
+    val genres: List<String> = emptyList(),
+    /** "Wikipedia" als de tekst daarvandaan komt, anders null (MA). */
+    val source: String? = null
+)
+
 data class MassArtist(
     val uri: String,
     val name: String,
