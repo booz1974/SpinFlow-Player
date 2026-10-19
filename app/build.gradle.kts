@@ -24,8 +24,8 @@ android {
         applicationId = localProperty("spinflow.applicationId") ?: "nl.jeroen.massqueue"
         minSdk = 26
         targetSdk = 36
-        versionCode = 21
-        versionName = "3.5.2"
+        versionCode = 23
+        versionName = "3.5.4"
         resValue("string", "app_name", "SpinFlow")
         buildConfigField(
             "String", "BUILD_TIME",
@@ -50,10 +50,10 @@ android {
 
     buildTypes {
         release {
-            // R8 tijdelijk uit: met R8 speelde de muziek in 3.5.1 niet goed af (oorzaak nog
-            // onbekend). Regels staan klaar in proguard-rules.pro voor als het weer aan gaat.
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // R8: kleinere, snellere release (Compose leunt erop). Reflectie-regels in
+            // proguard-rules.pro. Let op: in 3.5.1 haperde de muziek met R8 (oorzaak onbekend).
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
