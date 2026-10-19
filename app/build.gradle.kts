@@ -16,7 +16,7 @@ plugins {
 
 android {
     namespace = "nl.jeroen.massqueue"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         // Lokaal te overschrijven via spinflow.applicationId in local.properties (niet in git),
@@ -82,12 +82,12 @@ android {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
-    implementation("androidx.activity:activity-compose:1.9.1")
+    implementation("androidx.core:core-ktx:1.19.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
 
-    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
@@ -97,32 +97,32 @@ dependencies {
 
     // Netwerk: OkHttp voor HTTP JSON-RPC naar Music Assistant
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     // JSON: org.json is ingebouwd in Android, geen extra plugin/dependency nodig
 
     // Albumart laden
-    implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("io.coil-kt:coil-gif:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0")
 
     // Sleep-om-te-herordenen voor de wachtrij (inline in de lijst)
-    implementation("sh.calvin.reorderable:reorderable:1.5.2")
+    implementation("sh.calvin.reorderable:reorderable:3.1.0")
 
     // MediaSession: bediening op lockscreen / notificatie / bluetooth-knoppen
-    implementation("androidx.media:media:1.7.0")
+    implementation("androidx.media:media:1.8.0")
 
     // Lokale instellingen opslaan (server-adres)
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
 
     // Telefoon als MA-speler: Sendspin-client (legacy, zonder Noise-encryptie) + Media3-sessie
     implementation("com.github.Sendspin:sendspin-jvm:v0.3.4") {
         // org.json zit al in Android zelf
         exclude(group = "org.json", module = "json")
     }
-    implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
-    implementation("androidx.media3:media3-session:1.4.1")
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
+    implementation("androidx.media3:media3-session:1.11.1")
 
     // Locatie services
-    implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.android.gms:play-services-location:21.4.0")
 
     // Unit tests (tester)
     testImplementation("junit:junit:4.13.2")

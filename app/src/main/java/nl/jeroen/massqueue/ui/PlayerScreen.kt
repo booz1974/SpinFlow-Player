@@ -41,6 +41,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -108,7 +110,7 @@ import nl.jeroen.massqueue.AiRadioOptions
 import nl.jeroen.massqueue.Lang
 import nl.jeroen.massqueue.tr
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyColumnState
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /** Onthoudt iTunes-artwork per zoekterm (proceslevensduur) zodat we niet elke
  *  recompositie/queue-poll opnieuw dezelfde zoekopdracht doen. "" = niets gevonden. */
@@ -652,7 +654,7 @@ fun PlayerScreen(
                     val upcomingIdentity = upcoming.joinToString(",") { upcomingKey(it) }
                     var workingUpcoming by remember(upcomingIdentity) { mutableStateOf(upcoming) }
 
-                    val reorderState = rememberReorderableLazyColumnState(queueListState) { from, to ->
+                    val reorderState = rememberReorderableLazyListState(queueListState) { from, to ->
                         val f = workingUpcoming.indexOfFirst { upcomingKey(it) == from.key }
                         val t = workingUpcoming.indexOfFirst { upcomingKey(it) == to.key }
                         if (f != -1 && t != -1 && f != t) {
@@ -1377,7 +1379,7 @@ private fun MemberVolumeSheet(
                     IconButton(onClick = { onSetVolume(member.id, level - GROUP_VOLUME_STEP) }) {
                         Icon(Icons.AutoMirrored.Filled.VolumeDown, contentDescription = tr("Volume omlaag", "Volume down"))
                     }
-                    Slider(
+                    ClassicSlider(
                         value = dragValue ?: level.toFloat(),
                         onValueChange = { dragValue = it },
                         onValueChangeFinished = {
@@ -1539,7 +1541,7 @@ private fun MusicWizard(
                     Text(tr("Wat wil je afspelen?", "What do you want to play?"), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(16.dp))
                     if (isPlaylistsLoading) {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                        CircularProgressIndicator(strokeCap = StrokeCap.Square, modifier = Modifier.align(Alignment.CenterHorizontally))
                     } else {
                         LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                             items(playlists) { playlist ->
@@ -2024,6 +2026,7 @@ private fun MassImage(
             when (state) {
                 is coil.compose.AsyncImagePainter.State.Loading -> {
                     CircularProgressIndicator(
+                        strokeCap = StrokeCap.Square,
                         modifier = Modifier.size(24.dp).padding(4.dp),
                         strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -2326,7 +2329,7 @@ private fun NowPlayingHero(
                 var dragFraction by remember { mutableStateOf<Float?>(null) }
                 val displayElapsed = dragFraction?.let { (it * duration).toInt() } ?: shownElapsed
 
-                Slider(
+                ClassicSlider(
                     value = dragFraction ?: animatedProgress,
                     onValueChange = { dragFraction = it },
                     onValueChangeFinished = {
@@ -2334,11 +2337,9 @@ private fun NowPlayingHero(
                         dragFraction = null
                     },
                     modifier = Modifier.fillMaxWidth().height(22.dp),
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        activeTrackColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
-                    )
+                    thumbColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    activeTrackColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    inactiveTrackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 1.dp),
@@ -2467,7 +2468,7 @@ private fun ArtworkInfoDialog(
                 val current = info
                 when {
                     loading -> Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(strokeCap = StrokeCap.Square, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     }
                     current == null -> Text(
                         tr("Geen artiestinfo gevonden.", "No artist info found."),
@@ -2528,7 +2529,7 @@ private fun ArtworkInfoDialog(
                     Spacer(Modifier.height(8.dp))
                     if (story == null) {
                         Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(strokeCap = StrokeCap.Square, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                         }
                     } else {
                         Text(
@@ -2930,7 +2931,7 @@ private fun FavoritesSheet(
             when {
                 isLoading -> {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(strokeCap = StrokeCap.Square)
                     }
                 }
                 playlists.isEmpty() -> {
@@ -3042,7 +3043,7 @@ private fun RadiosSheet(
             when {
                 isLoading -> {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(strokeCap = StrokeCap.Square)
                     }
                 }
                 radios.isEmpty() -> {
@@ -3120,131 +3121,178 @@ private fun SearchSheet(
         onQueryChange(text)
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(bottom = 24.dp).heightIn(max = 560.dp)) {
-            Text(
-                tr("ZOEKEN", "SEARCH"),
-                style = MaterialTheme.typography.labelSmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-            )
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text(tr("Artiest, titel, album of afspeellijst", "Artist, title, album or playlist")) },
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (text.isNotBlank()) {
-                        IconButton(onClick = { text = "" }) {
-                            Icon(Icons.Filled.Close, contentDescription = tr("Wissen", "Clear"))
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
-            )
-            Spacer(Modifier.height(8.dp))
-            // Filter op provider: de gekozen chip blijft staan, ook als een nieuwe zoekopdracht
-            // niets van die provider oplevert, zodat je hem zelf weer kunt uitzetten.
-            val providerOptions = (results.providers + listOfNotNull(selectedProvider)).distinct()
-                .sortedBy { providerDisplayName(it).lowercase() }
-            if ((text.isNotBlank() && providerOptions.size > 1) || selectedProvider != null) {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    val resultsState = rememberLazyListState()
+    // Scrollen door de resultaten: toetsenbord weg, zodat je de hele lijst ziet
+    LaunchedEffect(resultsState) {
+        snapshotFlow { resultsState.isScrollInProgress }.collect { if (it) keyboard?.hide() }
+    }
+    // Meteen kunnen typen bij openen (niet bij terugkomen met al een zoekterm)
+    LaunchedEffect(Unit) { if (text.isBlank()) focusRequester.requestFocus() }
+
+    // Volledig scherm i.p.v. een onderpaneel: met het toetsenbord open bleef er in het paneel
+    // weinig ruimte over voor de resultaten.
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+    ) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 20.dp, top = 4.dp, bottom = 4.dp)
                 ) {
-                    item {
-                        FilterChip(
-                            selected = selectedProvider == null,
-                            onClick = { selectedProvider = null },
-                            label = { Text(tr("Alle", "All")) }
-                        )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Terug", "Back"))
                     }
-                    items(providerOptions) { provider ->
-                        FilterChip(
-                            selected = selectedProvider == provider,
-                            onClick = {
-                                selectedProvider = if (selectedProvider == provider) null else provider
-                            },
-                            label = { Text(providerDisplayName(provider)) }
-                        )
-                    }
+                    Text(
+                        tr("ZOEKEN", "SEARCH"),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            }
-            val shown = results.filteredBy(selectedProvider)
-            when {
-                isLoading -> {
-                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                text.isBlank() -> {
-                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            tr("Typ een artiest, titel, album of afspeellijst om te zoeken.", "Type an artist, title, album or playlist to search."),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                    }
-                }
-                shown.isEmpty -> {
-                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            tr("Niks gevonden.", "Nothing found."),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                    }
-                }
-                else -> {
-                    LazyColumn {
-                        if (shown.tracks.isNotEmpty()) {
-                            item { SearchSectionHeader(tr("Nummers", "Tracks")) }
-                            items(shown.tracks) { track ->
-                                SearchResultRow(
-                                    title = track.title,
-                                    subtitle = track.subtitle,
-                                    imagePath = track.imagePath,
-                                    fallbackTerm = "${track.subtitle} - ${track.title}",
-                                    onClick = { onSelectTrack(track) }
-                                )
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text(tr("Artiest, titel, album of afspeellijst", "Artist, title, album or playlist")) },
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (text.isNotBlank()) {
+                            IconButton(onClick = { text = "" }) {
+                                Icon(Icons.Filled.Close, contentDescription = tr("Wissen", "Clear"))
                             }
                         }
-                        if (shown.artists.isNotEmpty()) {
-                            item { SearchSectionHeader(tr("Artiesten", "Artists")) }
-                            items(shown.artists) { artist ->
-                                SearchResultRow(
-                                    title = artist.name,
-                                    subtitle = "",
-                                    imagePath = artist.imagePath,
-                                    fallbackTerm = artist.name,
-                                    onClick = { onSelectArtist(artist) }
-                                )
-                            }
+                    },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onSearch = {
+                            onQueryChange(text)
+                            keyboard?.hide()
                         }
-                        if (shown.albums.isNotEmpty()) {
-                            item { SearchSectionHeader("Albums") }
-                            items(shown.albums) { album ->
-                                SearchResultRow(
-                                    title = album.name,
-                                    subtitle = album.subtitle,
-                                    imagePath = album.imagePath,
-                                    fallbackTerm = "${album.subtitle} - ${album.name}",
-                                    onClick = { onSelectAlbum(album) }
-                                )
-                            }
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).focusRequester(focusRequester)
+                )
+                Spacer(Modifier.height(8.dp))
+                // Filter op provider: de gekozen chip blijft staan, ook als een nieuwe zoekopdracht
+                // niets van die provider oplevert, zodat je hem zelf weer kunt uitzetten.
+                val providerOptions = (results.providers + listOfNotNull(selectedProvider)).distinct()
+                    .sortedBy { providerDisplayName(it).lowercase() }
+                if ((text.isNotBlank() && providerOptions.size > 1) || selectedProvider != null) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item {
+                            FilterChip(
+                                selected = selectedProvider == null,
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selectedProvider == null,
+                                    borderColor = MaterialTheme.colorScheme.outline
+                                ),
+                                onClick = { selectedProvider = null },
+                                label = { Text(tr("Alle", "All")) }
+                            )
                         }
-                        if (shown.playlists.isNotEmpty()) {
-                            item { SearchSectionHeader(tr("Afspeellijsten", "Playlists")) }
-                            items(shown.playlists) { playlist ->
-                                SearchResultRow(
-                                    title = playlist.name,
-                                    subtitle = playlist.trackCount?.let { tr("$it nummers", "$it tracks") } ?: "",
-                                    imagePath = playlist.imagePath,
-                                    fallbackTerm = playlist.name,
-                                    onClick = { onSelectPlaylist(playlist) }
-                                )
+                        items(providerOptions) { provider ->
+                            FilterChip(
+                                selected = selectedProvider == provider,
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selectedProvider == provider,
+                                    borderColor = MaterialTheme.colorScheme.outline
+                                ),
+                                onClick = {
+                                    selectedProvider = if (selectedProvider == provider) null else provider
+                                },
+                                label = { Text(providerDisplayName(provider)) }
+                            )
+                        }
+                    }
+                }
+                val shown = results.filteredBy(selectedProvider)
+                when {
+                    isLoading -> {
+                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(strokeCap = StrokeCap.Square)
+                        }
+                    }
+                    text.isBlank() -> {
+                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                tr("Typ een artiest, titel, album of afspeellijst om te zoeken.", "Type an artist, title, album or playlist to search."),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                    shown.isEmpty -> {
+                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                tr("Niks gevonden.", "Nothing found."),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            state = resultsState,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            if (shown.tracks.isNotEmpty()) {
+                                item { SearchSectionHeader(tr("Nummers", "Tracks")) }
+                                items(shown.tracks) { track ->
+                                    SearchResultRow(
+                                        title = track.title,
+                                        subtitle = track.subtitle,
+                                        imagePath = track.imagePath,
+                                        fallbackTerm = "${track.subtitle} - ${track.title}",
+                                        onClick = { onSelectTrack(track) }
+                                    )
+                                }
+                            }
+                            if (shown.artists.isNotEmpty()) {
+                                item { SearchSectionHeader(tr("Artiesten", "Artists")) }
+                                items(shown.artists) { artist ->
+                                    SearchResultRow(
+                                        title = artist.name,
+                                        subtitle = "",
+                                        imagePath = artist.imagePath,
+                                        fallbackTerm = artist.name,
+                                        onClick = { onSelectArtist(artist) }
+                                    )
+                                }
+                            }
+                            if (shown.albums.isNotEmpty()) {
+                                item { SearchSectionHeader("Albums") }
+                                items(shown.albums) { album ->
+                                    SearchResultRow(
+                                        title = album.name,
+                                        subtitle = album.subtitle,
+                                        imagePath = album.imagePath,
+                                        fallbackTerm = "${album.subtitle} - ${album.name}",
+                                        onClick = { onSelectAlbum(album) }
+                                    )
+                                }
+                            }
+                            if (shown.playlists.isNotEmpty()) {
+                                item { SearchSectionHeader(tr("Afspeellijsten", "Playlists")) }
+                                items(shown.playlists) { playlist ->
+                                    SearchResultRow(
+                                        title = playlist.name,
+                                        subtitle = playlist.trackCount?.let { tr("$it nummers", "$it tracks") } ?: "",
+                                        imagePath = playlist.imagePath,
+                                        fallbackTerm = playlist.name,
+                                        onClick = { onSelectPlaylist(playlist) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -3375,7 +3423,7 @@ private fun AiRadioPanel(
 
             if (isLoading) {
                 Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(strokeCap = StrokeCap.Square)
                 }
             } else when (selectedTab) {
                 0 -> StationsTab(stations, hosts, activeDj, onStartStation, onStopDj, onCreateStation, onEditStation)

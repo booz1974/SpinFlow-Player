@@ -5,8 +5,10 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import nl.jeroen.massqueue.tr
 
 enum class AppTheme(val displayName: String, private val descriptionNl: String, private val descriptionEn: String) {
@@ -226,7 +228,20 @@ fun colorSchemeFor(appTheme: AppTheme): ColorScheme = when (appTheme) {
     AppTheme.MOCHA -> MochaDarkColors
     AppTheme.LAVENDER -> LavenderLightColors
     AppTheme.ROSE -> RoseLightColors
-}
+}.withClassicSurfaces()
+
+/**
+ * Material3 1.4 kleurt panelen, menu's, dialogen, kaarten en schakelaars met de
+ * surfaceContainer-rollen; 1.2 gebruikte surface (met een tint per hoogte) en surfaceVariant.
+ * Onze thema's zetten die rollen niet, dus zonder dit werden ze de grijze standaardkleuren.
+ * We vullen ze met wat 1.2 liet zien, zodat de app er na de update hetzelfde uitziet.
+ */
+private fun ColorScheme.withClassicSurfaces(): ColorScheme = copy(
+    surfaceContainerLow = surfaceColorAtElevation(1.dp),   // onderpanelen, chips (was surface, niveau 1)
+    surfaceContainer = surfaceColorAtElevation(3.dp),      // menu's, gescrolde titelbalk (niveau 2)
+    surfaceContainerHigh = surfaceColorAtElevation(6.dp),  // dialogen (niveau 3)
+    surfaceContainerHighest = surfaceVariant,              // kaarten, schakelaars
+)
 
 @Composable
 fun MassQueueTheme(

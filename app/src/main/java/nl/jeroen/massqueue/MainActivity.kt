@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -224,7 +225,7 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxSize(),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                    CircularProgressIndicator(strokeCap = StrokeCap.Square, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                             showSettings -> {
