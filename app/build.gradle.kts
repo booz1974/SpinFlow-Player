@@ -127,4 +127,5 @@ dependencies {
     // Unit tests (tester)
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20231013")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }

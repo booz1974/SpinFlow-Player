@@ -6,6 +6,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,6 +14,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
+
+/** Standaardpoort van de MA-webserver; URL's daarop zijn intern en lopen via ons server-adres. */
+private const val MA_PORT = 8095
 
 /**
  * Praat rechtstreeks met de Music Assistant server (niet via HA Ingress).
@@ -134,8 +138,8 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
             if (id.isBlank()) continue
             
             // We zoeken naar de actieve bron (playlist, radio, etc)
-            val activeSource = p.optString("active_source").takeIf { it.isNotBlank() }
-            val provider = p.optString("provider").takeIf { it.isNotBlank() }
+            val activeSource = p.str("active_source")
+            val provider = p.str("provider")
             val model = p.optJSONObject("device_info")?.optString("model")?.takeIf { it.isNotBlank() }
             // Nieuwere MA-versies gebruiken group_members, oudere group_childs
             val membersArr = p.optJSONArray("group_members") ?: p.optJSONArray("group_childs")
@@ -167,8 +171,8 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
             list.add(
                 MassPlayer(
                     id = id,
-                    name = p.optString("display_name", p.optString("name", id)),
-                    playbackState = p.optString("playback_state", null),
+                    name = p.str("display_name") ?: p.str("name") ?: id,
+                    playbackState = p.str("playback_state"),
                     // JSON-null (bv. de Hue-lamp: geen volume) blijft null i.p.v. 0
                     volumeLevel = if (p.has("volume_level") && !p.isNull("volume_level")) p.optInt("volume_level") else null,
                     volumeMuted = if (p.has("volume_muted") && !p.isNull("volume_muted")) p.optBoolean("volume_muted") else null,
@@ -176,11 +180,11 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                     activeSource = activeSource,
                     provider = provider,
                     model = model,
-                    type = p.optString("type").takeIf { it.isNotBlank() },
+                    type = p.str("type"),
                     groupMembers = groupMembers,
                     groupVolume = if (p.has("group_volume") && !p.isNull("group_volume")) p.optInt("group_volume") else null,
-                    syncedTo = p.optString("synced_to").takeIf { it.isNotBlank() && it != "null" },
-                    activeGroup = p.optString("active_group").takeIf { it.isNotBlank() && it != "null" },
+                    syncedTo = p.str("synced_to"),
+                    activeGroup = p.str("active_group"),
                     canGroupWith = canGroupWith,
                     outputProtocolIds = outputProtocolIds,
                     hiddenInMa = hiddenInMa
@@ -334,13 +338,10 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         
         // 1. We herschrijven ELKE lokale URL of URL van een bekende tunnel naar ons huidige actieve adres.
         // Dit zorgt ervoor dat plaatjes altijd laden via de verbinding die we nu gebruiken (IP of Tailscale).
-        val isInternal = finalUrl.startsWith("/") || 
-                         finalUrl.contains("localhost") || 
-                         finalUrl.contains("127.0.0.1") || 
-                         finalUrl.contains(".local") ||
-                         finalUrl.contains(".ts.net") ||
-                         finalUrl.contains("8095")
-                         
+        // Alleen host en poort tellen: een Spotify-hash met "8095" of een pad met ".local" erin
+        // is gewoon een externe URL.
+        val isInternal = finalUrl.startsWith("/") || isInternalHost(finalUrl)
+
         if (isInternal) {
             val pathOnly = try {
                 val url = java.net.URL(finalUrl)
@@ -362,6 +363,15 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         return finalUrl
     }
 
+    /** Wijst [url] naar de MA-server of het thuisnetwerk (localhost, .local, Tailscale, MA-poort 8095)? */
+    private fun isInternalHost(url: String): Boolean {
+        val parsed = url.toHttpUrlOrNull() ?: return false
+        val host = parsed.host
+        return host == "localhost" || host == "127.0.0.1" ||
+            host.endsWith(".local") || host.endsWith(".ts.net") ||
+            parsed.port == MA_PORT
+    }
+
     /**
      * Pad van één MA-image. Afbeeldingen die alleen op de server staan (bv. `logo.png` of
      * `/data/playlist_metadata_images/...`, remotely_accessible=false) zijn niet direct op te
@@ -376,7 +386,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         } else {
             // Oudere MA-versies zonder proxy_id
             val enc = java.net.URLEncoder.encode(path, "UTF-8")
-            "/imageproxy?path=$enc&provider=${img.optString("provider")}&size=256"
+            "/imageproxy?path=$enc&provider=${img.str("provider").orEmpty()}&size=256"
         }
     }
 
@@ -384,10 +394,8 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         if (obj == null) return null
         
         // 1. Check "images" lijst (meest voorkomend in MA)
-        obj.optJSONArray("images")?.let { arr ->
-            if (arr.length() > 0) return imagePathFrom(arr.getJSONObject(0))
-        }
-        
+        firstImagePath(obj.optJSONArray("images"))?.let { return it }
+
         // 2. Check "image" object
         // Zelfde behandeling als in "images": bij lokale bestanden is path het mp3-bestand zelf
         // (remotely_accessible=false), dat alleen via de imageproxy te laden is.
@@ -406,14 +414,21 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
 
         // 4. Check "metadata" object dieper
         obj.optJSONObject("metadata")?.let { meta ->
-            meta.optJSONArray("images")?.let { arr ->
-                if (arr.length() > 0) return imagePathFrom(arr.getJSONObject(0))
-            }
+            firstImagePath(meta.optJSONArray("images"))?.let { return it }
             listOf("logo", "icon", "thumbnail", "poster", "fanart", "image", "picture").forEach { key ->
                 meta.str(key)?.let { return it }
             }
         }
 
+        return null
+    }
+
+    /** Eerste bruikbare afbeelding uit een `images`-lijst; afwijkende items (null, geen pad) overslaan. */
+    private fun firstImagePath(arr: JSONArray?): String? {
+        if (arr == null) return null
+        for (i in 0 until arr.length()) {
+            arr.optJSONObject(i)?.let(::imagePathFrom)?.let { return it }
+        }
         return null
     }
 
@@ -503,17 +518,16 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
 
     private fun parseQueueTrack(item: JSONObject, absoluteIndex: Int): QueueTrack {
         val media = item.optJSONObject("media_item")
-        val title = media?.optString("name")?.takeIf { it.isNotBlank() }
-            ?: item.optString("name", "Onbekende track")
+        val title = media?.str("name") ?: item.str("name") ?: "Onbekende track"
 
         val artists = media?.optJSONArray("artists")
         val artistNames = mutableListOf<String>()
         if (artists != null) {
             for (i in 0 until artists.length()) {
-                artists.getJSONObject(i).optString("name").takeIf { it.isNotBlank() }?.let(artistNames::add)
+                artists.optJSONObject(i)?.str("name")?.let(artistNames::add)
             }
         }
-        val albumName = media?.optJSONObject("album")?.optString("name")
+        val albumName = media?.optJSONObject("album")?.str("name")
 
         val subtitle = listOfNotNull(
             artistNames.joinToString(", ").takeIf { it.isNotBlank() },
@@ -521,10 +535,9 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         ).joinToString(" - ")
 
         val duration = if (item.has("duration")) item.optInt("duration") else null
-        val queueItemId = item.optString("queue_item_id", item.optString("item_id", null))
-        val trackUri = media?.optString("uri") ?: item.optString("uri", null)
-        val mediaType = (media?.optString("media_type").takeIf { !it.isNullOrBlank() }
-            ?: item.optString("media_type").takeIf { it.isNotBlank() })
+        val queueItemId = item.str("queue_item_id") ?: item.str("item_id")
+        val trackUri = media?.str("uri") ?: item.str("uri")
+        val mediaType = media?.str("media_type") ?: item.str("media_type")
         val stream = extractStreamMeta(item)
 
         return QueueTrack(
