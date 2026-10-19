@@ -322,9 +322,12 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         val rawPath = findPathInJson(item) ?: findPathInJson(media)
             ?: findPathInJson(item?.optJSONObject("metadata"))
             ?: findPathInJson(media?.optJSONObject("metadata"))
-        
+            // Nummers zonder eigen hoes (bv. lokale bestanden): de hoes van het album, net als de MA-webapp
+            ?: findPathInJson(item?.optJSONObject("album"))
+            ?: findPathInJson(media?.optJSONObject("album"))
+
         if (rawPath.isNullOrBlank()) return null
-        
+
         var finalUrl = rawPath
         
         // 1. We herschrijven ELKE lokale URL of URL van een bekende tunnel naar ons huidige actieve adres.
@@ -363,10 +366,9 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
      * halen; die lopen via MA's imageproxy (`/imageproxy/<proxy_id>`), net als in de MA-webapp.
      */
     private fun imagePathFrom(img: JSONObject): String? {
-        val path = img.optString("path").ifBlank { img.optString("url") }.takeIf { it.isNotBlank() }
-            ?: return null
+        val path = img.str("path") ?: img.str("url") ?: return null
         if (img.optBoolean("remotely_accessible", true)) return path
-        val proxyId = img.optString("proxy_id").takeIf { it.isNotBlank() }
+        val proxyId = img.str("proxy_id")
         return if (proxyId != null) {
             "/imageproxy/$proxyId?size=256"
         } else {
@@ -385,24 +387,20 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         }
         
         // 2. Check "image" object
+        // Zelfde behandeling als in "images": bij lokale bestanden is path het mp3-bestand zelf
+        // (remotely_accessible=false), dat alleen via de imageproxy te laden is.
         obj.optJSONObject("image")?.let { imageObj ->
-            return imageObj.optString("path", "").takeIf { it.isNotBlank() } 
-                ?: imageObj.optString("url", "").takeIf { it.isNotBlank() }
+            return imagePathFrom(imageObj)
         }
-        
+
         // 3. Check directe velden "path" of "url"
-        val p = obj.optString("path", "")
-        if (p.isNotBlank()) return p
-        
-        val u = obj.optString("url", "")
-        if (u.isNotBlank()) return u
+        obj.str("path")?.let { return it }
+        obj.str("url")?.let { return it }
 
         // MA 2.0 radio stations vaak logo of icon
-        obj.optString("logo").takeIf { it.isNotBlank() }?.let { return it }
-        obj.optString("icon").takeIf { it.isNotBlank() }?.let { return it }
-        obj.optString("thumbnail").takeIf { it.isNotBlank() }?.let { return it }
-        obj.optString("image").takeIf { it.isNotBlank() }?.let { return it }
-        obj.optString("picture").takeIf { it.isNotBlank() }?.let { return it }
+        listOf("logo", "icon", "thumbnail", "image", "picture").forEach { key ->
+            obj.str(key)?.let { return it }
+        }
 
         // 4. Check "metadata" object dieper
         obj.optJSONObject("metadata")?.let { meta ->
@@ -410,12 +408,19 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                 if (arr.length() > 0) return imagePathFrom(arr.getJSONObject(0))
             }
             listOf("logo", "icon", "thumbnail", "poster", "fanart", "image", "picture").forEach { key ->
-                meta.optString(key).takeIf { it.isNotBlank() }?.let { return it }
+                meta.str(key)?.let { return it }
             }
         }
-        
+
         return null
     }
+
+    /**
+     * Tekstveld of null. Android's optString geeft bij JSON-null de tekst "null" terug; MA stuurt
+     * velden als `"image": null` mee, en dat mag geen plaatje-adres "null" worden.
+     */
+    private fun JSONObject.str(key: String): String? =
+        if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() && it != "null" }
 
     private data class StreamMeta(
         val artist: String?,

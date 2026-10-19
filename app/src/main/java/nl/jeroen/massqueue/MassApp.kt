@@ -57,5 +57,6 @@ class MassApp : Application(), ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
             .okHttpClient { OkHttpClient.Builder().addInterceptor(ServerAuth.interceptor).build() }
+            .apply { if (BuildConfig.DEBUG) logger(coil.util.DebugLogger()) }
             .build()
 }
