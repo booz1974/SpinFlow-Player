@@ -143,7 +143,12 @@ class MassEventSocket {
         // Server-info bij connect (geen 'event', wel versievelden): authenticeren.
         if (json.has("server_version") || json.has("schema_version")) {
             if (!authToken.isNullOrBlank()) {
-                webSocket.send("{\"command\":\"auth\",\"message_id\":\"auth\",\"args\":{\"token\":\"$authToken\"}}")
+                // Via JSONObject, zodat tekens als " of \ in het token de JSON niet breken
+                val auth = JSONObject()
+                    .put("command", "auth")
+                    .put("message_id", "auth")
+                    .put("args", JSONObject().put("token", authToken))
+                webSocket.send(auth.toString())
             }
             return
         }

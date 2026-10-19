@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -39,12 +40,27 @@ class ArtworkProvider : ContentProvider() {
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
         if (mode != "r") throw SecurityException("Alleen lezen")
         val url = uri.getQueryParameter(PARAM_URL)
-            ?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+            ?.takeIf { isAllowed(it) }
             ?: throw FileNotFoundException(uri.toString())
-        val dir = File(context!!.cacheDir, CACHE_DIR).apply { mkdirs() }
+        val ctx = context ?: throw FileNotFoundException(uri.toString())
+        val dir = File(ctx.cacheDir, CACHE_DIR).apply { mkdirs() }
         val file = File(dir, sha256(url))
         if (!file.exists()) download(url, file, dir)
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+    }
+
+    /**
+     * De provider is exported (Android Auto moet erbij), dus andere apps mogen hem geen
+     * willekeurige adressen laten ophalen: wel de eigen MA-server, en verder alleen https naar
+     * hostnamen (MA levert ook directe hoes-URL's van bv. Spotify). Geen http en geen kale
+     * IP-adressen buiten de server, zodat het thuisnetwerk niet via ons af te tasten is.
+     */
+    private fun isAllowed(url: String): Boolean {
+        val parsed = url.toHttpUrlOrNull() ?: return false
+        if (ServerAuth.isServerUrl(parsed)) return true
+        val host = parsed.host
+        val isIpLiteral = host.contains(':') || host.all { it.isDigit() || it == '.' }
+        return parsed.isHttps && !isIpLiteral && host != "localhost" && !host.endsWith(".local")
     }
 
     private fun download(url: String, file: File, dir: File) {

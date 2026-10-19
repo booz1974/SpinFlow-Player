@@ -1,6 +1,7 @@
 package nl.jeroen.massqueue
 
 import android.app.Application
+import android.util.Log
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import kotlinx.coroutines.runBlocking
@@ -23,13 +24,16 @@ object ServerAuth {
         token = newToken
     }
 
+    /** Of [url] naar de ingestelde MA-server wijst (zelfde scheme, host en poort). */
+    fun isServerUrl(url: HttpUrl): Boolean {
+        val b = base ?: return false
+        return url.scheme == b.scheme && url.host == b.host && url.port == b.port
+    }
+
     val interceptor = Interceptor { chain ->
         val req = chain.request()
-        val b = base
         val t = token
-        val sameServer = b != null && req.url.scheme == b.scheme &&
-            req.url.host == b.host && req.url.port == b.port
-        if (sameServer && !t.isNullOrBlank() && req.header("Authorization") == null) {
+        if (isServerUrl(req.url) && !t.isNullOrBlank() && req.header("Authorization") == null) {
             chain.proceed(req.newBuilder().header("Authorization", "Bearer $t").build())
         } else {
             chain.proceed(req)
@@ -41,7 +45,13 @@ class MassApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         // Taal vóór de eerste tekst (UI, meldingen, Android Auto) bekend maken
-        Lang.choice = runBlocking { SettingsStore(this@MassApp).loadLanguage() }
+        // Kapotte/onleesbare DataStore mag de start niet laten crashen: dan systeemtaal
+        Lang.choice = try {
+            runBlocking { SettingsStore(this@MassApp).loadLanguage() }
+        } catch (e: Exception) {
+            Log.w("MassApp", "Taalkeuze niet te lezen, systeemtaal gebruikt", e)
+            AppLanguage.SYSTEM
+        }
     }
 
     override fun newImageLoader(): ImageLoader =

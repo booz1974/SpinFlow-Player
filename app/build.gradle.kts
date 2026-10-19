@@ -50,7 +50,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8: kleinere, minder leesbare release. Reflectie-regels in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             // -Punsigned: release zonder ondertekening (bv. een ongesigneerde APK)
             if (releaseStoreFile != null && !project.hasProperty("unsigned")) {
                 signingConfig = signingConfigs.getByName("release")
@@ -116,4 +122,8 @@ dependencies {
 
     // Locatie services
     implementation("com.google.android.gms:play-services-location:21.3.0")
+
+    // Unit tests (tester)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20231013")
 }

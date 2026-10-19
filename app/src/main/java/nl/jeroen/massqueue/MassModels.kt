@@ -181,7 +181,10 @@ data class MassTrack(
 
 /** Eén artiest-zoekresultaat uit `music/search`. */
 /** MA's imageproxy levert standaard 256px; voor het grote hoes-venster vragen we meer. */
-fun largeImageUrl(url: String): String = url.replace("size=256", "size=1024")
+fun largeImageUrl(url: String): String = url.replace(SIZE_256, "size=1024")
+
+/** Alleen de hele parameter `size=256`, niet bv. `size=2560`. */
+private val SIZE_256 = Regex("(?<=[?&])size=256(?![0-9])")
 
 /** Artiestinfo voor het hoes-venster: biografie uit MA-metadata, anders uit Wikipedia. */
 data class ArtistInfo(
