@@ -1,5 +1,7 @@
 package nl.jeroen.massqueue
 
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -93,13 +95,24 @@ class MainActivity : ComponentActivity() {
         locationCallback = null
     }
 
+    // Wissel van wifi naar mobiel (of terug): event-socket meteen opnieuw laten verbinden
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            viewModel.onNetworkAvailable()
+        }
+    }
+
     override fun onStart() {
         super.onStart()
         startLocationUpdates()
         viewModel.setAppInForeground(true)
+        runCatching {
+            getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(networkCallback)
+        }
     }
 
     override fun onStop() {
+        runCatching { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(networkCallback) }
         stopLocationUpdates()
         viewModel.setAppInForeground(false)
         super.onStop()

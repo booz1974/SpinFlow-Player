@@ -128,10 +128,16 @@ private class MediaCodecChunkDecoder(
         return try {
             val inIndex = codec.dequeueInputBuffer(INPUT_TIMEOUT_US)
             if (inIndex >= 0) {
-                val buf = codec.getInputBuffer(inIndex)!!
-                buf.clear()
-                buf.put(data)
-                codec.queueInputBuffer(inIndex, 0, data.size, serverMicros, 0)
+                val buf = codec.getInputBuffer(inIndex)
+                if (buf != null) {
+                    buf.clear()
+                    buf.put(data)
+                    codec.queueInputBuffer(inIndex, 0, data.size, serverMicros, 0)
+                } else {
+                    // Buffer weg (bv. net na een reset): index leeg teruggeven, chunk overslaan
+                    codec.queueInputBuffer(inIndex, 0, 0, serverMicros, 0)
+                    Log.w(AUDIO_LOG_TAG, "$label: invoerbuffer ontbreekt, chunk overgeslagen")
+                }
             } else {
                 Log.w(AUDIO_LOG_TAG, "$label: geen invoerbuffer vrij, chunk overgeslagen")
             }
@@ -173,8 +179,8 @@ private class MediaCodecChunkDecoder(
             val outIndex = codec.dequeueOutputBuffer(info, if (parts.isEmpty()) OUTPUT_POLL_US else 0L)
             when {
                 outIndex >= 0 -> {
-                    if (info.size > 0) {
-                        val buf = codec.getOutputBuffer(outIndex)!!
+                    val buf = if (info.size > 0) codec.getOutputBuffer(outIndex) else null
+                    if (buf != null) {
                         buf.position(info.offset).limit(info.offset + info.size)
                         val shorts = ShortArray(info.size / 2)
                         buf.order(ByteOrder.nativeOrder()).asShortBuffer().get(shorts)

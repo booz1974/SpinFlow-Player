@@ -208,6 +208,8 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                 nameCache[uri] = finalName
             }
             finalName
+        } catch (e: CancellationException) {
+            throw e
         } catch (ignore: Exception) {
             null
         }
@@ -1266,6 +1268,8 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                 val resp = call(cmd, args)
                 if (BuildConfig.DEBUG) android.util.Log.d("MassAiRadio", "OK '$cmd' args=$args -> $resp")
                 return resp
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) android.util.Log.w("MassAiRadio", "FAIL '$cmd' args=$args : ${e.message}")
                 if (firstError == null) firstError = e
@@ -1405,6 +1409,8 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
                 aiRadioSaveWrapKey[family] = key
                 if (BuildConfig.DEBUG) android.util.Log.d("MassAiRadio", "save '$suffix' OK met wrap='${key.ifEmpty { "(plat)" }}'")
                 return resp
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 last = e
                 if (isInvalidCommand(e)) throw e // endpoint bestaat niet: verder proberen zinloos
@@ -1424,6 +1430,7 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         var last: Exception? = null
         for (args in shapes) {
             try { return callAiRadio(cmd(suffix), args) }
+            catch (e: CancellationException) { throw e }
             catch (e: Exception) { last = e; if (isInvalidCommand(e)) throw e }
         }
         throw last ?: MassApiException(tr("delete $suffix mislukt", "delete $suffix failed"))
@@ -1642,6 +1649,8 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
         if ("queue_dj/status" in unsupportedAiRadioCommands) return null
         val resp = try {
             callAiRadio(cmd("queue_dj/status"))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             // Deze MA-server kent het endpoint niet (geen AI Radio-plugin): niet meer elke poll proberen.
             if (isInvalidCommand(e)) unsupportedAiRadioCommands += "queue_dj/status"

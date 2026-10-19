@@ -200,6 +200,8 @@ class PlaybackService : Service() {
                 .build()
             val result = imageLoader.execute(request)
             ((result as? SuccessResult)?.drawable as? BitmapDrawable)?.bitmap
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }

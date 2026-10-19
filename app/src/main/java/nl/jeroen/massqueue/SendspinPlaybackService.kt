@@ -121,6 +121,8 @@ class SendspinPlaybackService : MediaLibraryService() {
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
+    private var lockRenewJob: Job? = null
+    private var lockReleaseJob: Job? = null
 
     private lateinit var audioManager: AudioManager
     private var focusRequest: AudioFocusRequest? = null
@@ -207,7 +209,10 @@ class SendspinPlaybackService : MediaLibraryService() {
         super.onUpdateNotification(session, true)
     }
 
-    /** App uit de recente apps geveegd: blijf gewoon speler. */
+    /**
+     * App uit de recente apps geveegd: blijf gewoon speler (bewust leeg; de standaard van
+     * MediaSessionService zou de service stoppen als er niets speelt).
+     */
     override fun onTaskRemoved(rootIntent: Intent?) {}
 
     override fun onDestroy() {
@@ -229,7 +234,7 @@ class SendspinPlaybackService : MediaLibraryService() {
 
     private fun start(settings: SendspinSettings) {
         if (BuildConfig.DEBUG) android.util.Log.d("PLAYERDBG", "eigen Sendspin client_id=${settings.clientId} name=${settings.clientName}")
-        authClient = SendspinAuthClient(
+        val auth = SendspinAuthClient(
             delegate = OkHttpClient.Builder()
                 .connectTimeout(CONNECT_TIMEOUT_MS, TimeUnit.MILLISECONDS)
                 .readTimeout(0, TimeUnit.MILLISECONDS)
@@ -239,14 +244,20 @@ class SendspinPlaybackService : MediaLibraryService() {
             tokenForUrl = { url -> settings.token.takeIf { it.isNotBlank() && url == settings.externalUrl } },
             clientId = settings.clientId
         )
-        connectLoop(settings)
+        authClient = auth
+        connectLoop(settings, auth)
     }
 
     /**
      * Bouwt de Sendspin-client. Op mobiel netwerk vragen we MA om een ruimere buffer
      * (meer audio vooruit), zodat korte haperingen in de auto niet hoorbaar worden.
      */
-    private fun newClient(settings: SendspinSettings, mobile: Boolean, quality: SendspinAudioQuality): SendSpinClient {
+    private fun newClient(
+        settings: SendspinSettings,
+        auth: SendspinAuthClient,
+        mobile: Boolean,
+        quality: SendspinAudioQuality
+    ): SendSpinClient {
         val moshi = Moshi.Builder()
             .add(JsonOptionalAdapterFactory())
             .addLast(KotlinJsonAdapterFactory())
@@ -260,7 +271,7 @@ class SendspinPlaybackService : MediaLibraryService() {
         )
         val prefs = if (mobile) base.copy(playerBufferCapacity = MOBILE_BUFFER_CAPACITY) else base
         val c = SendSpinClient(
-            okHttpClient = authClient!!,
+            okHttpClient = auth,
             moshi = moshi,
             preferences = prefs,
             clientId = settings.clientId,
@@ -337,7 +348,7 @@ class SendspinPlaybackService : MediaLibraryService() {
      * server niet bestoken. Is het netwerktype (wifi/mobiel) veranderd, dan bouwen we de
      * client opnieuw op met de bijbehorende buffergrootte.
      */
-    private fun connectLoop(settings: SendspinSettings) = scope.launch {
+    private fun connectLoop(settings: SendspinSettings, auth: SendspinAuthClient) = scope.launch {
         val urls = listOfNotNull(settings.externalUrl, settings.localUrl).distinct()
         val connected = setOf(ClientState.CLOCK_SYNCING, ClientState.STREAMING)
         val lost = setOf(ClientState.ERROR, ClientState.DISCONNECTED)
@@ -353,7 +364,7 @@ class SendspinPlaybackService : MediaLibraryService() {
                 c?.disconnect("network")
                 audioPlayer?.stop()
                 clientQuality = audioQuality
-                c = newClient(settings, mobile, clientQuality)
+                c = newClient(settings, auth, mobile, clientQuality)
                 clientMobile = mobile
             }
             val url = urls[attempt % urls.size]
@@ -428,7 +439,11 @@ class SendspinPlaybackService : MediaLibraryService() {
                     val playing = group == GroupPlaybackState.PLAYING
                     sessionPlayer.confirmPlaying(playing)
                     val streaming = format != null
-                    if (streaming) acquireLocks() else releaseLocks()
+                    when {
+                        streaming && playing -> acquireLocks()
+                        streaming -> releaseLocksAfterPause()
+                        else -> releaseLocks()
+                    }
                     if (streaming && playing) requestFocus() else if (!streaming) abandonFocus()
                 }
         }
@@ -858,11 +873,25 @@ class SendspinPlaybackService : MediaLibraryService() {
 
     // ---- Wake/wifi-locks --------------------------------------------------------------
 
+    /**
+     * Locks aan zolang er gespeeld wordt. De wakelock heeft een time-out (vangnet als een
+     * release ooit gemist wordt) en wordt tijdens het spelen steeds verlengd.
+     */
     private fun acquireLocks() {
+        lockReleaseJob?.cancel()
+        lockReleaseJob = null
         if (wakeLock == null) {
             wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "SpinFlow:sendspin")
-                .apply { setReferenceCounted(false); acquire() }
+                .apply { setReferenceCounted(false); acquire(WAKE_LOCK_TIMEOUT_MS) }
+        }
+        if (lockRenewJob?.isActive != true) {
+            lockRenewJob = scope.launch {
+                while (isActive) {
+                    delay(WAKE_LOCK_RENEW_MS)
+                    wakeLock?.acquire(WAKE_LOCK_TIMEOUT_MS)
+                }
+            }
         }
         if (wifiLock == null) {
             val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -877,7 +906,24 @@ class SendspinPlaybackService : MediaLibraryService() {
         }
     }
 
+    /**
+     * Gepauzeerd met open stream: locks nog even vasthouden, zodat hervatten vanuit MA snel
+     * blijft, maar bij een lange pauze geen batterij meer verbruiken.
+     */
+    private fun releaseLocksAfterPause() {
+        if (wakeLock == null && wifiLock == null) return
+        if (lockReleaseJob?.isActive == true) return
+        lockReleaseJob = scope.launch {
+            delay(PAUSED_LOCK_HOLD_MS)
+            releaseLocks()
+        }
+    }
+
     private fun releaseLocks() {
+        lockRenewJob?.cancel()
+        lockRenewJob = null
+        lockReleaseJob?.cancel()
+        lockReleaseJob = null
         wakeLock?.let { if (it.isHeld) it.release() }
         wakeLock = null
         wifiLock?.let { if (it.isHeld) it.release() }
@@ -967,6 +1013,12 @@ class SendspinPlaybackService : MediaLibraryService() {
         private const val RETRY_BASE_MS = 5_000L
         private const val RETRY_MAX_MS = 60_000L
         private const val DUCK_GAIN = 0.2f
+
+        /** Wakelock-vangnet: verloopt na 1 uur, tijdens het spelen elke 30 min verlengd. */
+        private const val WAKE_LOCK_TIMEOUT_MS = 60 * 60_000L
+        private const val WAKE_LOCK_RENEW_MS = 30 * 60_000L
+        /** Zo lang houden we de locks vast als er gepauzeerd is. */
+        private const val PAUSED_LOCK_HOLD_MS = 10 * 60_000L
 
         /** Op mobiel netwerk: ~5 s audio (48 kHz, 16 bit, stereo) i.p.v. de standaard 256 KB (~1,4 s). */
         private const val MOBILE_BUFFER_CAPACITY = 1_048_576

@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,20 +43,27 @@ class MassEventSocket {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private var baseUrl: String = ""
-    private var authToken: String? = null
+    // Wordt vanaf de main-thread én OkHttp's socket-thread gelezen en geschreven; verbinden
+    // en herverbinden lopen daarom via @Synchronized.
+    @Volatile private var baseUrl: String = ""
+    @Volatile private var authToken: String? = null
 
     @Volatile private var ws: WebSocket? = null
     private var reconnectJob: Job? = null
-    private var attempts = 0
-    private var running = false
+    @Volatile private var attempts = 0
+    @Volatile private var running = false
 
-    private val _events = MutableSharedFlow<MassEvent>(extraBufferCapacity = 128)
+    // Vol? Dan het oudste event weg: elk event leidt toch tot verversen, het nieuwste telt.
+    private val _events = MutableSharedFlow<MassEvent>(
+        extraBufferCapacity = 128,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     val events: SharedFlow<MassEvent> = _events.asSharedFlow()
 
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected.asStateFlow()
 
+    @Synchronized
     fun updateConfig(newBaseUrl: String, newToken: String?) {
         val changed = newBaseUrl != baseUrl || newToken != authToken
         baseUrl = newBaseUrl
@@ -69,6 +77,7 @@ class MassEventSocket {
         }
     }
 
+    @Synchronized
     fun start() {
         if (running) return
         running = true
@@ -76,11 +85,30 @@ class MassEventSocket {
         connect()
     }
 
+    @Synchronized
     fun stop() {
         running = false
         reconnectJob?.cancel()
         closeCurrent()
         _connected.value = false
+    }
+
+    /** Definitief stoppen (ViewModel weg): ook de eigen coroutine-scope opruimen. */
+    fun close() {
+        stop()
+        scope.cancel()
+    }
+
+    /**
+     * Netwerk (opnieuw) beschikbaar of app terug in beeld: niet wachten op de backoff
+     * (tot 30 s), maar meteen opnieuw verbinden als we niet verbonden zijn.
+     */
+    @Synchronized
+    fun reconnectNow() {
+        if (!running || _connected.value) return
+        attempts = 0
+        reconnectJob?.cancel()
+        connect()
     }
 
     // ---- intern ------------------------------------------------------------
@@ -103,6 +131,7 @@ class MassEventSocket {
         return "$scheme/ws"
     }
 
+    @Synchronized
     private fun connect() {
         if (!running || baseUrl.isBlank()) return
         closeCurrent()
@@ -181,6 +210,7 @@ class MassEventSocket {
         )
     }
 
+    @Synchronized
     private fun scheduleReconnect() {
         if (!running) return
         reconnectJob?.cancel()

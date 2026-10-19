@@ -194,6 +194,8 @@ private suspend fun lookupItunesYear(artist: String?, title: String?): Int? {
         }
         itunesYearCache[searchTerm] = year ?: 0
         year
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
     } catch (_: Exception) {
         null
     }
@@ -1990,6 +1992,8 @@ private fun MassImage(
 
                 itunesArtCache[fallbackTerm] = resolved
                 if (resolved.isNotEmpty()) currentModel = resolved
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (_: Exception) { }
         }
     }

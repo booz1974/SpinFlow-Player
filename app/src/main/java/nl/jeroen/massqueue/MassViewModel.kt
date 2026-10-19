@@ -2,6 +2,7 @@ package nl.jeroen.massqueue
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -366,6 +367,7 @@ class MassViewModel : ViewModel() {
         appInForeground = foreground
         // Terug in beeld: meteen verversen en de wachttijd resetten.
         if (foreground && pollJob != null) startPolling()
+        if (foreground) eventSocket.reconnectNow()
     }
 
     private fun tickOnce() {
@@ -389,8 +391,13 @@ class MassViewModel : ViewModel() {
         tick()
     }
 
+    /** Netwerk (opnieuw) beschikbaar: event-socket niet op de backoff laten wachten. */
+    fun onNetworkAvailable() {
+        eventSocket.reconnectNow()
+    }
+
     override fun onCleared() {
-        eventSocket.stop()
+        eventSocket.close()
         super.onCleared()
     }
 
@@ -417,6 +424,8 @@ class MassViewModel : ViewModel() {
             // `players/all` geen `active_source` teruggeeft terwijl de wachtrij wel gevuld is).
             val queueSummaries = try {
                 c.getAllQueueSummaries().associateBy { it.queueId }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 currentState.queueSummaries
             }
@@ -468,7 +477,13 @@ class MassViewModel : ViewModel() {
                 val selectedPlayer = players.find { it.id == selected }
                 
                 // AI Radio status polling
-                val djStatus = try { c.getAiRadioQueueStatus(selected) } catch (e: Exception) { null }
+                val djStatus = try {
+                    c.getAiRadioQueueStatus(selected)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
                 _uiState.update { it.copy(activeDjStatus = djStatus) }
 
                 val currentUri = queue?.activeSourceUri ?: selectedPlayer?.activeSource
@@ -517,6 +532,8 @@ class MassViewModel : ViewModel() {
                 _uiState.update { it.copy(queue = null, isLoading = false) }
                 publishNowPlaying(null, false)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (_uiState.value.players.isEmpty()) {
                 _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: tr("Verbindingsfout", "Connection error")) }
@@ -582,8 +599,9 @@ class MassViewModel : ViewModel() {
 
         // De URI van het radio-item zelf is een stabielere zender-identiteit dan
         // active_source (dat kan wisselen tijdens een tussendoor-nummer).
-        val stationUri = cur!!.uri ?: queue.activeSourceUri
-        lastRadioUri = cur.uri ?: lastRadioUri
+        val radioItem = cur ?: return
+        val stationUri = radioItem.uri ?: queue.activeSourceUri
+        lastRadioUri = radioItem.uri ?: lastRadioUri
         val key = "${cur.streamArtist} ${cur.streamTrack}"
 
         // De zender is terug na een handmatig gekozen nummer: behandel dit als
@@ -657,6 +675,8 @@ class MassViewModel : ViewModel() {
                     client?.playMedia(playerId, radioUri, "add")
                 }
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 pendingRadioResumeUri = null
                 _uiState.update { it.copy(errorMessage = tr("Nummer afspelen mislukt: ${e.message}", "Playing track failed: ${e.message}")) }
@@ -716,6 +736,8 @@ class MassViewModel : ViewModel() {
                 _uiState.update { it.copy(savingRadioHistoryPlaylist = false, infoMessage = message) }
                 delay(4000)
                 _uiState.update { if (it.infoMessage == message) it.copy(infoMessage = null) else it }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(savingRadioHistoryPlaylist = false, errorMessage = tr("Playlist opslaan mislukt: ${e.message}", "Saving playlist failed: ${e.message}"))
@@ -741,6 +763,8 @@ class MassViewModel : ViewModel() {
             if (playerId != null && player?.playbackState?.lowercase() == "playing") {
                 try {
                     client?.sendPlayerCommand("players/cmd/play_pause", playerId)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     _uiState.update { it.copy(errorMessage = tr("Slaaptimer kon de muziek niet stoppen: ${e.message}", "Sleep timer could not stop the music: ${e.message}")) }
                 }
@@ -756,6 +780,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playIndex(playerId, index)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Afspelen mislukt: ${e.message}", "Playback failed: ${e.message}")) }
             }
@@ -769,6 +795,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.moveItemNext(playerId, track, currentIndex)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Verplaatsen mislukt: ${e.message}", "Moving failed: ${e.message}")) }
             }
@@ -787,6 +815,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.moveQueueItem(playerId, item, delta)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Verplaatsen mislukt: ${e.message}", "Moving failed: ${e.message}")) }
             }
@@ -799,6 +829,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.sendPlayerCommand(command, playerId)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Commando mislukt: ${e.message}", "Command failed: ${e.message}")) }
             }
@@ -861,6 +893,8 @@ class MassViewModel : ViewModel() {
                     }
                 }
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Volume wijzigen mislukt: ${e.message}", "Changing volume failed: ${e.message}")) }
             }
@@ -888,6 +922,8 @@ class MassViewModel : ViewModel() {
                     c.sendPlayerCommand("players/cmd/volume_mute", memberId, JSONObject().put("muted", true))
                 }
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Volume wijzigen mislukt: ${e.message}", "Changing volume failed: ${e.message}")) }
             }
@@ -916,7 +952,7 @@ class MassViewModel : ViewModel() {
         return try {
             if (track.hasStreamInfo) c.getArtistInfo(null, track.streamArtist)
             else c.getArtistInfo(track.artistUri, track.artist)
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
             null
@@ -929,7 +965,7 @@ class MassViewModel : ViewModel() {
         return try {
             if (track.hasStreamInfo) c.getSongStory(track.streamTrack, track.streamArtist)
             else c.getSongStory(track.title, track.artist)
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
             null
@@ -951,6 +987,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.setGroupMember(targetId, disco.id, add = on)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = "Disco ${if (on) "aanzetten" else "uitzetten"} mislukt: ${e.message}") }
             } finally {
@@ -966,6 +1004,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.shuffleQueue(playerId, !currentShuffle)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Shuffelen mislukt: ${e.message}", "Shuffling failed: ${e.message}")) }
             }
@@ -981,6 +1021,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.setAutoplay(playerId, enable)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { s ->
                     s.copy(
@@ -1000,6 +1042,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.setCrossfade(playerId, enable)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { s ->
                     s.copy(
@@ -1017,6 +1061,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.clearQueue(playerId)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Wachtrij wissen mislukt: ${e.message}", "Clearing queue failed: ${e.message}")) }
             }
@@ -1033,6 +1079,8 @@ class MassViewModel : ViewModel() {
                 userPickedPlayer = true
                 _uiState.update { it.copy(selectedPlayerId = targetPlayerId) }
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Verhuizen mislukt: ${e.message}", "Moving music failed: ${e.message}")) }
             }
@@ -1093,6 +1141,8 @@ class MassViewModel : ViewModel() {
                         favoritesLoading = false
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(favoritesLoading = false, errorMessage = tr("Favorieten laden mislukt: ${e.message}", "Loading favorites failed: ${e.message}"))
@@ -1114,6 +1164,8 @@ class MassViewModel : ViewModel() {
                         radiosLoading = false
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(radiosLoading = false, errorMessage = tr("Radiozenders laden mislukt: ${e.message}", "Loading radio stations failed: ${e.message}"))
@@ -1177,6 +1229,8 @@ class MassViewModel : ViewModel() {
                 onSavePlaylist?.invoke(station.name, stationUri)
                 client?.startAiRadio(playerId, station)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("AI Radio start mislukt: ${e.message}", "AI Radio start failed: ${e.message}")) }
             }
@@ -1193,10 +1247,14 @@ class MassViewModel : ViewModel() {
                 val djCleared = runCatching { c.setQueueDj(playerId, null) }.isSuccess
                 try {
                     c.stopAiRadio(playerId)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     if (!djCleared) throw e
                 }
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("AI Radio stop mislukt: ${e.message}", "AI Radio stop failed: ${e.message}")) }
             }
@@ -1208,6 +1266,8 @@ class MassViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 onResult(c.getAiRadioStationTemplate())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Geen server-template? Val terug op een leeg lokaal sjabloon.
                 if (e.message?.contains("Invalid Command", ignoreCase = true) == true) {
@@ -1227,6 +1287,8 @@ class MassViewModel : ViewModel() {
                 c.saveAiRadioStation(station)
                 loadAiRadioData() // lijst verversen
                 onComplete()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Opslaan mislukt: ${e.message}", "Saving failed: ${e.message}")) }
             }
@@ -1239,6 +1301,8 @@ class MassViewModel : ViewModel() {
             try {
                 c.deleteAiRadioStation(stationId)
                 loadAiRadioData()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Verwijderen mislukt: ${e.message}", "Deleting failed: ${e.message}")) }
             }
@@ -1252,6 +1316,8 @@ class MassViewModel : ViewModel() {
         viewModelScope.launch {
             val base = try {
                 c.getAiRadioHostTemplate()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 if (e.message?.contains("Invalid Command", ignoreCase = true) != true) {
                     _uiState.update { it.copy(errorMessage = tr("Presentator-template laden mislukt: ${e.message}", "Loading host template failed: ${e.message}")) }
@@ -1278,6 +1344,8 @@ class MassViewModel : ViewModel() {
                 c.saveAiRadioHost(host)
                 loadAiRadioData()
                 onComplete()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Presentator opslaan mislukt: ${e.message}", "Saving host failed: ${e.message}")) }
             }
@@ -1290,6 +1358,8 @@ class MassViewModel : ViewModel() {
             try {
                 c.deleteAiRadioHost(hostId)
                 loadAiRadioData()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Presentator verwijderen mislukt: ${e.message}", "Deleting host failed: ${e.message}")) }
             }
@@ -1303,6 +1373,8 @@ class MassViewModel : ViewModel() {
         viewModelScope.launch {
             val base = try {
                 c.getAiRadioSectionTemplate()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 if (e.message?.contains("Invalid Command", ignoreCase = true) != true) {
                     _uiState.update { it.copy(errorMessage = tr("Segment-template laden mislukt: ${e.message}", "Loading segment template failed: ${e.message}")) }
@@ -1328,6 +1400,8 @@ class MassViewModel : ViewModel() {
                 c.saveAiRadioSection(section)
                 loadAiRadioData()
                 onComplete()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Segment opslaan mislukt: ${e.message}", "Saving segment failed: ${e.message}")) }
             }
@@ -1340,6 +1414,8 @@ class MassViewModel : ViewModel() {
             try {
                 c.deleteAiRadioSection(sectionId)
                 loadAiRadioData()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Segment verwijderen mislukt: ${e.message}", "Deleting segment failed: ${e.message}")) }
             }
@@ -1356,6 +1432,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, playlist.uri, "replace")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Afspelen mislukt: ${e.message}", "Playback failed: ${e.message}")) }
             }
@@ -1380,6 +1458,8 @@ class MassViewModel : ViewModel() {
                 c.playMedia(playerId, playlist.uri, "replace")
                 refreshAfterCommand()
                 loadAiRadioData()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("AI Radio met presentator starten mislukt: ${e.message}", "Starting AI Radio with host failed: ${e.message}")) }
             }
@@ -1396,6 +1476,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, playlist.uri, "replace_next")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Vervangen mislukt: ${e.message}", "Replacing failed: ${e.message}")) }
             }
@@ -1412,6 +1494,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, radio.uri, "replace")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Afspelen mislukt: ${e.message}", "Playback failed: ${e.message}")) }
             }
@@ -1433,6 +1517,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, radio.uri, "replace_next")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Vervangen mislukt: ${e.message}", "Replacing failed: ${e.message}")) }
             }
@@ -1456,6 +1542,8 @@ class MassViewModel : ViewModel() {
             try {
                 val results = c.search(query)
                 _uiState.update { it.copy(searchResults = results, searchLoading = false) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(searchLoading = false, errorMessage = tr("Zoeken mislukt: ${e.message}", "Search failed: ${e.message}"))
@@ -1477,6 +1565,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, track.uri, "replace")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Afspelen mislukt: ${e.message}", "Playback failed: ${e.message}")) }
             }
@@ -1490,6 +1580,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, track.uri, "replace_next")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Vervangen mislukt: ${e.message}", "Replacing failed: ${e.message}")) }
             }
@@ -1503,6 +1595,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, artist.uri, "replace")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Afspelen mislukt: ${e.message}", "Playback failed: ${e.message}")) }
             }
@@ -1516,6 +1610,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, artist.uri, "replace_next")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Vervangen mislukt: ${e.message}", "Replacing failed: ${e.message}")) }
             }
@@ -1530,6 +1626,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, album.uri, "replace")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Afspelen mislukt: ${e.message}", "Playback failed: ${e.message}")) }
             }
@@ -1544,6 +1642,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.playMedia(playerId, album.uri, "replace_next")
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Vervangen mislukt: ${e.message}", "Replacing failed: ${e.message}")) }
             }
@@ -1558,6 +1658,8 @@ class MassViewModel : ViewModel() {
             try {
                 client?.seek(playerId, positionSeconds)
                 refreshAfterCommand()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = tr("Spoelen mislukt: ${e.message}", "Seeking failed: ${e.message}")) }
             }

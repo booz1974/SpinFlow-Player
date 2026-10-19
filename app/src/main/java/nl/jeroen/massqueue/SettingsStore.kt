@@ -371,16 +371,14 @@ class SettingsStore(private val context: Context) {
 
     /** Laadt de Sendspin-instellingen; genereert (en bewaart) de client-ID bij de eerste keer. */
     suspend fun loadSendspin(): SendspinSettings {
-        if (context.dataStore.data.first()[KEY_SENDSPIN_CLIENT_ID].isNullOrBlank()) {
-            context.dataStore.edit {
-                if (it[KEY_SENDSPIN_CLIENT_ID].isNullOrBlank()) {
-                    it[KEY_SENDSPIN_CLIENT_ID] = "spinflow-" + java.util.UUID.randomUUID().toString()
-                }
+        // edit() geeft de opgeslagen stand terug, dus de ID komt altijd uit dezelfde lezing
+        val prefs = context.dataStore.edit {
+            if (it[KEY_SENDSPIN_CLIENT_ID].isNullOrBlank()) {
+                it[KEY_SENDSPIN_CLIENT_ID] = "spinflow-" + java.util.UUID.randomUUID().toString()
             }
         }
-        val prefs = context.dataStore.data.first()
         return SendspinSettings(
-            clientId = prefs[KEY_SENDSPIN_CLIENT_ID]!!,
+            clientId = prefs[KEY_SENDSPIN_CLIENT_ID].orEmpty(),
             clientName = prefs[KEY_SENDSPIN_CLIENT_NAME]
                 ?.takeIf { it.isNotBlank() && it != LEGACY_SENDSPIN_CLIENT_NAME }
                 ?: defaultSendspinClientName(context),

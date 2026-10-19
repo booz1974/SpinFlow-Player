@@ -69,7 +69,7 @@ De app is zich bewust van zijn locatie om de interface schoon en relevant te hou
 - **Zoeken** 🔍: Zoek op artiest, titel, album of afspeellijst via Music Assistant (`music/search`). Resultaten staan per categorie (nummers, artiesten, albums, afspeellijsten); albums tonen hoes, artiest en jaartal. Alles kun je direct afspelen of als volgende in de wachtrij zetten.
 - **Filter op provider**: Onder het zoekveld staan chips (Alle, Spotify, YouTube Music, Bandcamp, Lokale bestanden, …) met de providers die in de resultaten voorkomen. Een bibliotheek-item telt mee voor elke provider waaraan het gekoppeld is (`provider_mappings`).
 - **Crossfade & Autoplay**: Rechtsonder in de "Nu Spelend"-kaart staan twee icoontjes waarmee je crossfade (`player_queues/crossfade`) en autoplay, het vroegere "Don't stop the music" (`player_queues/autoplay`), van de wachtrij aan- of uitzet. Aan = fel icoon met een rondje erachter.
-- **Playlist-hoezen**: Afbeeldingen die alleen op de MA-server staan (bijv. eigen collages of het MA-logo bij dynamische playlists) lopen via MA's imageproxy (`/imageproxy/<proxy_id>`). Heeft een favoriete playlist helemaal geen afbeelding, dan maakt de app een 2×2-collage van de hoezen van de eerste nummers.
+- **Playlist-hoezen**: Afbeeldingen die alleen op de MA-server staan (bijv. eigen collages of het MA-logo bij dynamische playlists) lopen via MA's imageproxy (`/imageproxy/<proxy_id>`). Dat geldt ook voor hoezen die in lokale muziekbestanden zitten; heeft een nummer geen eigen hoes, dan toont de app die van het album. Heeft een favoriete playlist helemaal geen afbeelding, dan maakt de app een 2×2-collage van de hoezen van de eerste nummers.
 - **Meest gekozen bovenaan**: Favoriete afspeellijsten en radiozenders worden gesorteerd op hoe vaak je ze kiest (daarna alfabetisch). De tellingen blijven bewaard tussen app-herstarts.
 - **Slaaptimer** 🌙: Zet via de maan-knop een timer op 15/30/45/60/90 minuten. Een chip toont de resterende tijd; daarna pauzeert de muziek automatisch.
 - **Lockscreen- & bluetooth-bediening**: Een `MediaSession` toont het nu spelende nummer met hoes in de notificatiebalk en op het lockscreen. Play/pauze/vorige/volgende werken daar en via bluetooth-, koptelefoon- en autoknoppen; de commando's gaan naar Music Assistant en de status komt terug in de notificatie.
@@ -85,7 +85,7 @@ De telefoon kan zelf een Music Assistant-speler zijn: MA speelt dan muziek af op
 - **Vaste speler**: De app maakt eenmalig een vaste client-ID aan, zodat MA steeds dezelfde speler ziet. In de spelerslijst staat hij bovenaan als **"Deze telefoon"** met een telefoon-icoon.
 - **Verbinding**: Via [Sendspin](https://github.com/Sendspin): eerst via het server-adres (bijv. over Tailscale) naar `wss://<server>/sendspin`, met het API-token als eerste `auth`-bericht; lukt dat niet, dan thuis rechtstreeks naar de Sendspin-poort (`ws://<MA-host>:8927/sendspin`, instelbaar). Bij mislukken probeert de app het opnieuw met oplopende wachttijd (5 s tot 60 s).
 - **Afspelen**: Ongecomprimeerde PCM via `AudioTrack`, getimed op de klok van de server zodat de telefoon in de pas blijft met andere spelers; kleine afwijkingen worden onhoorbaar bijgestuurd.
-- **Achtergrond & batterij**: Een foreground-service met mediamelding (Media3) houdt de speler actief. Wake- en wifilock worden alleen vastgehouden zolang er echt muziek binnenkomt.
+- **Achtergrond & batterij**: Een foreground-service met mediamelding (Media3) houdt de speler actief. Wake- en wifilock worden alleen vastgehouden zolang er muziek speelt; bij pauze gaan ze na 10 minuten uit, en de wakelock heeft als vangnet een time-out die tijdens het spelen steeds verlengd wordt.
 - **Lockscreen**: Titel, artiest, album en hoes; play/pauze/vorige/volgende gaan als commando naar MA.
 - **Andere geluiden**: Bij een navigatie-aanwijzing gaat de muziek zachter, bij een telefoongesprek is alleen de telefoon even stil (een groep in huis speelt gewoon door). Start een andere muziek-app, dan pauzeert MA.
 - **Let op**: De Sendspin-bibliotheek (`sendspin-jvm`) ondersteunt nog geen Noise-encryptie. MA 2.10 accepteert zulke "legacy" clients nog; in latere MA-versies kan dat verdwijnen.
@@ -93,7 +93,7 @@ De telefoon kan zelf een Music Assistant-speler zijn: MA speelt dan muziek af op
 
 ### 5a. Android Auto 🚗
 De telefoon-als-speler is ook een mediabron voor Android Auto (Media3 `MediaLibraryService`). Wat je in de auto kiest, speelt MA af op deze telefoon; de app zelf ziet er niet anders uit.
-- **Bladeren**: *Favorieten* (favoriete playlists) en *Radio* (favoriete zenders), met hoezen. De hoezen gaan via een eigen `ArtworkProvider`, omdat Android Auto het API-token niet kent; die geeft alleen afbeeldingen door.
+- **Bladeren**: *Favorieten* (favoriete playlists) en *Radio* (favoriete zenders), met hoezen. De hoezen gaan via een eigen `ArtworkProvider`, omdat Android Auto het API-token niet kent; die geeft alleen afbeeldingen door, en haalt die alleen van de eigen MA-server of via https van een gewone hostnaam (geen adressen op het thuisnetwerk namens andere apps).
 - **Zoeken**: In de auto zoeken (of "Hey Google, speel … op SpinFlow") doorzoekt de MA-bibliotheek; bij een gesproken opdracht speelt de beste treffer (exacte naam, anders het eerste nummer).
 - **Wachtrij**: De MA-wachtrij (2 vorige + tot 50 volgende) staat in de wachtrijweergave; tik op een nummer om erheen te springen.
 - **Knoppen**: Shuffle, herhalen (uit → alles → één) en favoriet maken. Alleen zichtbaar zolang Android Auto verbonden is; melding en lockscreen van de telefoon blijven verder ongewijzigd.
@@ -101,7 +101,7 @@ De telefoon-als-speler is ook een mediabron voor Android Auto (Media3 `MediaLibr
 
 ### 6. Techniek & Connectiviteit
 - **Rechtstreekse Verbinding**: Commando's gaan via JSON-RPC (`POST /api`) direct naar de Music Assistant server; HA-services via de REST API.
-- **Push i.p.v. pollen**: Een WebSocket (`wss://<server>/ws`) authenticeert met een `auth`-commando en levert daarna live events (`player_updated`, `queue_updated`, …). De app ververst binnen ~250 ms op zo'n event i.p.v. elke paar seconden te pollen. Er blijft een trage heartbeat (30 s) als vangnet; valt de socket weg, dan schakelt de app terug naar snel pollen (3 s) en verbindt automatisch opnieuw met oplopende backoff. Er is altijd maar één socket: opnieuw verbinden gebeurt alleen bij een echt ander server-adres of token, en meldingen van een al vervangen socket worden genegeerd.
+- **Push i.p.v. pollen**: Een WebSocket (`wss://<server>/ws`) authenticeert met een `auth`-commando en levert daarna live events (`player_updated`, `queue_updated`, …). De app ververst binnen ~250 ms op zo'n event i.p.v. elke paar seconden te pollen. Er blijft een trage heartbeat (30 s) als vangnet; valt de socket weg, dan schakelt de app terug naar snel pollen (3 s) en verbindt automatisch opnieuw met oplopende backoff. Komt het netwerk terug (bijv. wissel tussen wifi en mobiel) of komt de app weer in beeld, dan verbindt hij meteen opnieuw in plaats van op de backoff te wachten. Er is altijd maar één socket: opnieuw verbinden gebeurt alleen bij een echt ander server-adres of token, en meldingen van een al vervangen socket worden genegeerd.
 - **Portrait Only**: De app blijft altijd in staande stand voor een consistente ervaring.
 - **Sessie Management**: Houdt je Music Assistant-sessie op de achtergrond actief.
 - **Artwork-cache**: iTunes-hoeszoekopdrachten worden per zoekterm onthouden om onnodig netwerkverkeer te voorkomen.
@@ -113,8 +113,9 @@ Het S-logo staat in `docs/logo/` als SVG en als PNG van 1024 en 2048 px (bijv. v
 
 1. **Android Studio**: Open dit project in Android Studio (Ladybug of nieuwer).
 2. **Command line (optioneel)**: De Gradle-wrapper zit in de repo, dus `./gradlew assembleDebug` (of `gradlew.bat` op Windows) bouwt een debug-APK zonder Android Studio. Nodig: JDK 17 (bijv. de JBR van Android Studio). `sendspin-jvm` komt via JitPack.
-3. **Server Instellen**: Bij de eerste start vraagt de app om de URL van je Music Assistant server en een Access Token. Hetzelfde token wordt gebruikt voor *Telefoon als speler*.
-4. **Locatie**: Geef toestemming voor locatiegebruik voor de slimme filtering.
+3. **Release & tests**: De release-build gebruikt R8 (verkleinen en optimaliseren, flink soepeler voor Compose); de regels staan in `app/proguard-rules.pro` (o.a. het Sendspin-protocol heel laten voor Moshi). De mapping zit in de AAB zelf, dus Play Console krijgt hem automatisch. Unit tests: `./gradlew testDebugUnitTest`.
+4. **Server Instellen**: Bij de eerste start vraagt de app om de URL van je Music Assistant server en een Access Token. Hetzelfde token wordt gebruikt voor *Telefoon als speler*.
+5. **Locatie**: Geef toestemming voor locatiegebruik voor de slimme filtering.
 
 ---
 *Ontwikkeld voor eigen gebruik door Jeroen van Sonsbeek (jeroenvansonsbeek@gmail.com).*
