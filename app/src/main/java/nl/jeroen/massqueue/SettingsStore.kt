@@ -186,7 +186,8 @@ class SettingsStore(private val context: Context) {
                         artist = obj.optString("artist").takeIf { it.isNotBlank() },
                         track = obj.optString("track").takeIf { it.isNotBlank() },
                         album = obj.optString("album").takeIf { it.isNotBlank() },
-                        at = obj.optLong("at", System.currentTimeMillis())
+                        at = obj.optLong("at", System.currentTimeMillis()),
+                        imageUrl = obj.optString("image").takeIf { it.isNotBlank() }
                     )
                 )
             }
@@ -302,6 +303,7 @@ class SettingsStore(private val context: Context) {
                 put("track", entry.track ?: "")
                 put("album", entry.album ?: "")
                 put("at", entry.at)
+                put("image", entry.imageUrl ?: "")
             })
         }
         context.dataStore.edit { prefs ->

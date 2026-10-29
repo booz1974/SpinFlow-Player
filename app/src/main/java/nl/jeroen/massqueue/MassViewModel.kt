@@ -578,6 +578,11 @@ class MassViewModel : ViewModel() {
      * gewist zodra er een ándere zender wordt gestart, niet zodra de radio (tijdelijk)
      * stopt met spelen.
      */
+    private fun radioHistoryEntryOf(cur: QueueTrack) = RadioHistoryEntry(
+        cur.streamArtist, cur.streamTrack, cur.streamAlbum,
+        imageUrl = cur.streamImage?.takeIf { it.isNotBlank() }
+    )
+
     private suspend fun updateRadioHistory(queue: QueueState?) {
         val cur = queue?.currentItem
         val isRadioNow = cur != null && cur.isRadio && cur.hasStreamInfo
@@ -610,14 +615,14 @@ class MassViewModel : ViewModel() {
             pendingRadioResumeUri = null
             lastRadioStationUri = stationUri
             lastRadioTrackKey = key
-            currentRadioTrack = RadioHistoryEntry(cur.streamArtist, cur.streamTrack, cur.streamAlbum)
+            currentRadioTrack = radioHistoryEntryOf(cur)
             return
         }
 
         if (stationUri != lastRadioStationUri) {
             lastRadioStationUri = stationUri
             lastRadioTrackKey = key
-            currentRadioTrack = RadioHistoryEntry(cur.streamArtist, cur.streamTrack, cur.streamAlbum)
+            currentRadioTrack = radioHistoryEntryOf(cur)
             if (_uiState.value.radioHistory.isNotEmpty()) {
                 _uiState.update { it.copy(radioHistory = emptyList()) }
             }
@@ -625,10 +630,17 @@ class MassViewModel : ViewModel() {
             return
         }
 
-        if (key != lastRadioTrackKey) {
+        if (key == lastRadioTrackKey) {
+            // De hoes komt soms pas na titel/artiest binnen; dan alsnog onthouden
+            val track = currentRadioTrack
+            val image = cur.streamImage?.takeIf { it.isNotBlank() }
+            if (track != null && track.imageUrl == null && image != null) {
+                currentRadioTrack = track.copy(imageUrl = image)
+            }
+        } else {
             val previous = currentRadioTrack
             lastRadioTrackKey = key
-            currentRadioTrack = RadioHistoryEntry(cur.streamArtist, cur.streamTrack, cur.streamAlbum)
+            currentRadioTrack = radioHistoryEntryOf(cur)
             if (previous != null) {
                 val next = (listOf(previous) + _uiState.value.radioHistory).take(50)
                 _uiState.update { it.copy(radioHistory = next) }

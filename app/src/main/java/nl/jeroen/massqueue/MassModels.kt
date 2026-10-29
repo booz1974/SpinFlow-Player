@@ -250,7 +250,9 @@ data class RadioHistoryEntry(
     val artist: String?,
     val track: String?,
     val album: String? = null,
-    val at: Long = System.currentTimeMillis()
+    val at: Long = System.currentTimeMillis(),
+    /** Hoes van het nummer (stream-metadata); null bij oude items → iTunes-terugval in de UI. */
+    val imageUrl: String? = null
 )
 
 /**

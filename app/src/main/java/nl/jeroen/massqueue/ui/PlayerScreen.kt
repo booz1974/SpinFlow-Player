@@ -133,6 +133,37 @@ private fun itunesSearchTerm(artist: String?, title: String?): String? =
         .takeIf { it.isNotBlank() }
 
 /**
+ * Zoekt de hoes van een nummer op via iTunes (alleen songs, artiest moet kloppen), met
+ * cache per term. Voor radio-geschiedenis zonder eigen hoes; levert null als niets past.
+ */
+private suspend fun lookupItunesSongArt(artist: String?, title: String?): String? {
+    val searchTerm = itunesSearchTerm(artist, title) ?: return null
+    val cacheKey = "song:$searchTerm"
+    itunesArtCache[cacheKey]?.let { return it.takeIf { url -> url.isNotEmpty() } }
+    return try {
+        val encodedTerm = java.net.URLEncoder.encode(searchTerm, "UTF-8")
+        val searchUrl = "https://itunes.apple.com/search?term=$encodedTerm&entity=song&limit=10&country=NL"
+        val art = withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val response = okhttp3.OkHttpClient().newCall(
+                okhttp3.Request.Builder().url(searchUrl).build()
+            ).execute().body?.string() ?: return@withContext null
+            val results = org.json.JSONObject(response).optJSONArray("results") ?: return@withContext null
+            (0 until results.length()).map { results.getJSONObject(it) }.firstOrNull { r ->
+                val artistName = r.optString("artistName")
+                artist == null || artistName.contains(artist, ignoreCase = true) ||
+                    artist.contains(artistName, ignoreCase = true)
+            }?.optString("artworkUrl100")?.takeIf { it.isNotBlank() }?.replace("100x100bb", "600x600bb")
+        }
+        itunesArtCache[cacheKey] = art ?: ""
+        art
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/**
  * Zoekt het releasejaar van een track op via de iTunes Search API, met cache per term.
  * We vragen meerdere resultaten op, filteren covers/remixes en artiestmismatches eruit,
  * en kiezen in drie stappen:
@@ -1209,6 +1240,13 @@ private fun RadioHistoryRow(entry: RadioHistoryEntry, showDivider: Boolean, onCl
         }
     }
     val titleText = if (year != null) "${entry.track ?: "-"} ($year)" else (entry.track ?: "-")
+    // Oude items (en zenders zonder hoes in de metadata) krijgen de hoes via iTunes
+    var art by remember(entry.imageUrl, searchTerm) {
+        mutableStateOf(entry.imageUrl ?: searchTerm?.let { itunesArtCache["song:$it"] }?.takeIf { it.isNotEmpty() })
+    }
+    LaunchedEffect(entry.imageUrl, searchTerm) {
+        if (art == null) art = lookupItunesSongArt(entry.artist, entry.track)
+    }
 
     Surface(
         shape = RoundedCornerShape(10.dp),
@@ -1225,12 +1263,22 @@ private fun RadioHistoryRow(entry: RadioHistoryEntry, showDivider: Boolean, onCl
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                Icons.Filled.History,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            val artModifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+            if (art != null) {
+                MassImage(model = art, modifier = artModifier)
+            } else {
+                Box(artModifier, contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.History,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
