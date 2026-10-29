@@ -33,9 +33,39 @@ class SendspinAuthClient(
         // OkHttp schrijft ws(s):// intern om naar http(s)://; terugzetten zodat het adres
         // vergelijkbaar is met wat aan SendSpinClient.connect() is meegegeven
         val wsUrl = request.url.toString().replaceFirst(Regex("^http"), "ws")
+        val compat = CompatListener(listener)
         val token = tokenForUrl(wsUrl)
-            ?: return delegate.newWebSocket(request, listener)
-        return delegate.newWebSocket(request, AuthListener(listener, token))
+        val raw = delegate.newWebSocket(request, if (token != null) AuthListener(compat, token) else compat)
+        return compat.wrap(raw)
+    }
+
+    /**
+     * Laat de bibliotheek via een [CompatWebSocket] versturen, zodat [SendspinWireCompat] de
+     * berichten kan bijwerken. sendspin-jvm vergelijkt de socket uit de callbacks met wat
+     * [newWebSocket] teruggaf, dus beide moeten hetzelfde object zijn.
+     */
+    private class CompatListener(private val inner: WebSocketListener) : WebSocketListener() {
+        private val compat = SendspinWireCompat()
+        @Volatile private var wrapped: CompatWebSocket? = null
+
+        @Synchronized
+        fun wrap(raw: WebSocket): WebSocket =
+            wrapped?.takeIf { it.raw === raw } ?: CompatWebSocket(raw, compat).also { wrapped = it }
+
+        override fun onOpen(webSocket: WebSocket, response: Response) = inner.onOpen(wrap(webSocket), response)
+        override fun onMessage(webSocket: WebSocket, text: String) =
+            inner.onMessage(wrap(webSocket), compat.incoming(text))
+        override fun onMessage(webSocket: WebSocket, bytes: ByteString) = inner.onMessage(wrap(webSocket), bytes)
+        override fun onClosing(webSocket: WebSocket, code: Int, reason: String) =
+            inner.onClosing(wrap(webSocket), code, reason)
+        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) =
+            inner.onClosed(wrap(webSocket), code, reason)
+        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) =
+            inner.onFailure(wrap(webSocket), t, response)
+    }
+
+    private class CompatWebSocket(val raw: WebSocket, private val compat: SendspinWireCompat) : WebSocket by raw {
+        override fun send(text: String): Boolean = raw.send(compat.outgoing(text))
     }
 
     private inner class AuthListener(
