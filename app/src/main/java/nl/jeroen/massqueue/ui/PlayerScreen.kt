@@ -2012,11 +2012,12 @@ private fun MassImage(
     val context = LocalContext.current
     var currentModel by remember(model) { mutableStateOf<Any?>(model) }
     var hasAttemptedFallback by remember(model) { mutableStateOf(false) }
+    // Originele URL faalde (bv. dode link): dan ook de fallback proberen
+    var loadFailed by remember(model) { mutableStateOf(false) }
 
     // iTunes Fallback Logica (met cache per zoekterm)
-    LaunchedEffect(model, fallbackTerm) {
-        // We proberen de fallback alleen als het originele model leeg is
-        if (model.isNullOrEmpty() && !fallbackTerm.isNullOrBlank() && !hasAttemptedFallback) {
+    LaunchedEffect(model, fallbackTerm, loadFailed) {
+        if ((model.isNullOrEmpty() || loadFailed) && !fallbackTerm.isNullOrBlank() && !hasAttemptedFallback) {
             hasAttemptedFallback = true
 
             val cached = itunesArtCache[fallbackTerm]
@@ -2026,7 +2027,8 @@ private fun MassImage(
             }
             try {
                 val encodedTerm = java.net.URLEncoder.encode(fallbackTerm, "UTF-8")
-                val searchUrl = "https://itunes.apple.com/search?term=$encodedTerm&limit=1"
+                // media=music: zonder filter levert iTunes ook luisterboeken/podcasts op
+                val searchUrl = "https://itunes.apple.com/search?term=$encodedTerm&media=music&limit=1"
 
                 val resolved = withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val response = okhttp3.OkHttpClient().newCall(
@@ -2056,9 +2058,9 @@ private fun MassImage(
                 .crossfade(true)
                 .listener(
                     onError = { _, _ ->
-                        if (!hasAttemptedFallback && !fallbackTerm.isNullOrBlank()) {
-                            hasAttemptedFallback = true
-                        }
+                        // Niet de vlag zetten (dat blokkeerde de fallback bij een leeg model),
+                        // maar alleen melden dat de echte URL faalde
+                        if (!model.isNullOrEmpty() && currentModel == model) loadFailed = true
                     }
                 )
                 .build()
