@@ -19,14 +19,14 @@ enum class SendspinAudioQuality(val codec: String) {
 
     val label: String
         get() = when (this) {
-            LOSSLESS -> "Lossless (FLAC)"
-            ORIGINAL -> tr("Origineel (PCM)", "Original (PCM)")
+            LOSSLESS -> tr("Zuinig (FLAC)", "Data saver (FLAC)")
+            ORIGINAL -> tr("Standaard (PCM)", "Standard (PCM)")
         }
 
     val description: String
         get() = when (this) {
-            LOSSLESS -> tr("Zelfde geluid als PCM, ongeveer de helft van de data", "Same sound as PCM, about half the data")
-            ORIGINAL -> tr("Onbewerkte audio, meeste data (standaard)", "Unprocessed audio, most data (default)")
+            LOSSLESS -> tr("Zelfde geluid, ongeveer de helft minder data. Handig onderweg met mobiele data", "Same sound, about half the data. Handy on the go with mobile data")
+            ORIGINAL -> tr("Zelfde geluid, meeste data", "Same sound, most data")
         }
 
     /** Voorkeursvolgorde van codecs: de gekozen eerst, PCM altijd erin als terugval. */

@@ -368,8 +368,8 @@ class SendspinPlaybackService : MediaLibraryService() {
                 clientMobile = mobile
             }
             val url = urls[attempt % urls.size]
-            val where = if (url == settings.externalUrl) tr("via server-adres", "via server address") else tr("lokaal", "local")
-            publish(PhonePlayerStatus(true, tr("Verbinden ($where)…", "Connecting ($where)…"), settings.clientId))
+            val where = if (url == settings.externalUrl) "" else tr(" (reserve-adres)", " (backup address)")
+            publish(PhonePlayerStatus(true, tr("Verbinden$where…", "Connecting$where…"), settings.clientId))
             sessionPlayer.setIdleText(tr("Verbinden met Music Assistant…", "Connecting to Music Assistant…"))
             c.disconnect("switch")
             c.connect(url)
@@ -380,7 +380,7 @@ class SendspinPlaybackService : MediaLibraryService() {
             }
             if (result in connected) {
                 failedRounds = 0
-                publish(PhonePlayerStatus(true, tr("Verbonden ($where)", "Connected ($where)"), settings.clientId))
+                publish(PhonePlayerStatus(true, tr("Verbonden$where", "Connected$where"), settings.clientId))
                 sessionPlayer.setIdleText(tr("Verbonden met Music Assistant", "Connected to Music Assistant"))
                 c.state.first { it in lost }
                 publish(PhonePlayerStatus(true, tr("Verbinding kwijt, opnieuw proberen…", "Connection lost, retrying…"), settings.clientId))
@@ -390,8 +390,18 @@ class SendspinPlaybackService : MediaLibraryService() {
                 attempt++
                 if (attempt % urls.size == 0) {
                     failedRounds++
-                    val reason = authClient?.lastRejection?.let { ": $it" }.orEmpty()
-                    publish(PhonePlayerStatus(true, tr("Geen verbinding met MA$reason", "No connection to MA$reason"), settings.clientId, isError = true))
+                    val reason = authClient?.lastRejection?.let { " ($it)" }.orEmpty()
+                    publish(
+                        PhonePlayerStatus(
+                            true,
+                            tr(
+                                "Geen verbinding met Music Assistant. Controleer je internet, het server-adres en je token$reason",
+                                "No connection to Music Assistant. Check your internet, the server address and your token$reason"
+                            ),
+                            settings.clientId,
+                            isError = true
+                        )
+                    )
                     sessionPlayer.setIdleText(tr("Geen verbinding met Music Assistant", "No connection to Music Assistant"))
                     delay((RETRY_BASE_MS shl (failedRounds - 1).coerceAtMost(4)).coerceAtMost(RETRY_MAX_MS))
                 }

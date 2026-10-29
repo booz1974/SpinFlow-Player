@@ -267,7 +267,10 @@ fun SettingsScreen(
                                 )
                                 Text(
                                     if (phonePlayerEnabled) phonePlayerStatus.text
-                                    else tr("Uit: deze telefoon verschijnt niet als speler in MA", "Off: this phone does not appear as a player in MA"),
+                                    else tr(
+                                        "Speel muziek van Music Assistant af op deze telefoon, net als op een speaker in huis",
+                                        "Play music from Music Assistant on this phone, just like on a speaker at home"
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = if (phonePlayerEnabled && phonePlayerStatus.isError) MaterialTheme.colorScheme.error
                                     else MaterialTheme.colorScheme.onSurfaceVariant
@@ -294,6 +297,7 @@ fun SettingsScreen(
                             value = phoneName,
                             onValueChange = { phoneName = it },
                             label = { Text(tr("Naam in Music Assistant", "Name in Music Assistant")) },
+                            supportingText = { Text(tr("Zo heet deze telefoon in de lijst met spelers", "How this phone is called in the list of players")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Outlined.Badge, contentDescription = null) },
@@ -303,9 +307,9 @@ fun SettingsScreen(
                         OutlinedTextField(
                             value = phoneUrl,
                             onValueChange = { phoneUrl = it },
-                            label = { Text(tr("Sendspin-adres thuis (terugval)", "Sendspin address at home (fallback)")) },
+                            label = { Text(tr("Reserve-adres thuis (meestal niet nodig)", "Backup address at home (usually not needed)")) },
                             placeholder = { Text(DEFAULT_SENDSPIN_LOCAL_URL) },
-                            supportingText = { Text(tr("Eerst via het server-adres hierboven, met je API-token; dit adres alleen als dat niet lukt", "First via the server address above, using your API token; this address only if that fails")) },
+                            supportingText = { Text(tr("Alleen invullen als de telefoon thuis geen verbinding krijgt", "Only fill in if the phone can't connect at home")) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Outlined.Link, contentDescription = null) },
@@ -323,7 +327,7 @@ fun SettingsScreen(
                             ) {
                                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(tr("Toepassen", "Apply"), fontWeight = FontWeight.SemiBold)
+                                Text(tr("Naam en adres opslaan", "Save name and address"), fontWeight = FontWeight.SemiBold)
                             }
                         }
 
