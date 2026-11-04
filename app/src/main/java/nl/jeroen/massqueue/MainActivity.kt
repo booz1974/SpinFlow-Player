@@ -34,6 +34,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.launch
+import nl.jeroen.massqueue.ui.DeviceNameScreen
 import nl.jeroen.massqueue.ui.PlayerScreen
 import nl.jeroen.massqueue.ui.SettingsScreen
 import nl.jeroen.massqueue.ui.theme.AppTheme
@@ -172,6 +173,10 @@ class MainActivity : ComponentActivity() {
                     if (s.enabled && s.externalUrl != null) SendspinPlaybackService.start(this@MainActivity)
                 }
 
+                // Allereerste start: eerst verplicht een naam voor dit toestel kiezen
+                var needsDeviceName by remember { mutableStateOf<Boolean?>(null) }
+                LaunchedEffect(Unit) { needsDeviceName = settingsStore.needsDeviceName() }
+
                 LaunchedEffect(Unit) {
                     val settings = settingsStore.load()
                     val configured = settingsStore.isConfigured()
@@ -182,6 +187,7 @@ class MainActivity : ComponentActivity() {
                     viewModel.setDiscoPlayerId(settings.discoPlayerId)
                     viewModel.setPinnedPlayerIds(settings.pinnedPlayerIds)
                     viewModel.setShowMaHiddenPlayers(settings.showMaHiddenPlayers)
+                    viewModel.setPhonePlayerOnTop(settings.phonePlayerOnTop)
                     if (configured && settings.url.isNotBlank()) {
                         viewModel.configureServer(
                             baseUrl = settings.url, 
@@ -219,7 +225,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         when {
-                            loadedUrl == null -> {
+                            loadedUrl == null || needsDeviceName == null -> {
                                 // Toon een simpel laadscherm in plaats van een zwart scherm
                                 Box(
                                     modifier = Modifier.fillMaxSize(),
@@ -227,6 +233,22 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     CircularProgressIndicator(strokeCap = StrokeCap.Square, color = MaterialTheme.colorScheme.primary)
                                 }
+                            }
+                            needsDeviceName == true -> {
+                                DeviceNameScreen(
+                                    suggestedName = defaultSendspinClientName(this@MainActivity),
+                                    onConfirm = { name ->
+                                        scope.launch {
+                                            settingsStore.completeDeviceName(name)
+                                            val s = settingsStore.loadSendspin()
+                                            sendspin = s
+                                            viewModel.setPhonePlayer(s.clientId)
+                                            // Zonder server nog niet starten; dat gebeurt na het opslaan van de server
+                                            if (s.externalUrl != null) SendspinPlaybackService.start(this@MainActivity)
+                                            needsDeviceName = false
+                                        }
+                                    }
+                                )
                             }
                             showSettings -> {
                                 // Systeem-terugknop sluit Instellingen i.p.v. de hele app (zolang er een server is)
@@ -339,6 +361,11 @@ class MainActivity : ComponentActivity() {
                                                 SendspinPlaybackService.start(this@MainActivity)
                                             }
                                         }
+                                    },
+                                    phonePlayerOnTop = state.phonePlayerOnTop,
+                                    onTogglePhonePlayerOnTop = { onTop ->
+                                        viewModel.setPhonePlayerOnTop(onTop)
+                                        scope.launch { settingsStore.savePhonePlayerOnTop(onTop) }
                                     },
                                     phonePlayerAudioQuality = sendspin?.audioQuality ?: SendspinAudioQuality.ORIGINAL,
                                     onSelectPhonePlayerAudioQuality = { q ->

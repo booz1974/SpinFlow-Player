@@ -1733,17 +1733,27 @@ private fun visibleSortedPlayers(state: UiState): List<MassPlayer> {
           !(state.hiddenPlayerIds.contains(player.id) ||
             state.hiddenPlayerIds.contains(player.name.lowercase().trim())))
     }.sortedWith(
-        // Deze telefoon altijd bovenaan
-        compareByDescending<MassPlayer> { state.isOwnPlayer(it) }
-            .thenByDescending {
-                it.playbackState?.lowercase() == "playing" || state.queueSummaries[it.id]?.isPlaying == true
-            }
-            .thenByDescending { it.isGroup }
-            .thenByDescending { state.queueSummaries[it.id]?.hasItems == true }
-            .thenByDescending { state.playerLastPlayingAtMs[it.id] ?: 0L }
-            .thenBy { label(it).lowercase() }
+        if (state.phonePlayerOnTop) {
+            // Deze telefoon altijd bovenaan
+            compareByDescending<MassPlayer> { state.isOwnPlayer(it) }
+                .thenByDescending { isPlayingNow(it, state) }
+                .thenByDescending { it.isGroup }
+                .thenByDescending { state.queueSummaries[it.id]?.hasItems == true }
+                .thenByDescending { state.playerLastPlayingAtMs[it.id] ?: 0L }
+                .thenBy { label(it).lowercase() }
+        } else {
+            // Spelende speler bovenaan, daarna spelers met geladen nummers; telefoon sorteert mee
+            compareByDescending<MassPlayer> { isPlayingNow(it, state) }
+                .thenByDescending { state.queueSummaries[it.id]?.hasItems == true }
+                .thenByDescending { state.playerLastPlayingAtMs[it.id] ?: 0L }
+                .thenByDescending { it.isGroup }
+                .thenBy { label(it).lowercase() }
+        }
     )
 }
+
+private fun isPlayingNow(player: MassPlayer, state: UiState): Boolean =
+    player.playbackState?.lowercase() == "playing" || state.queueSummaries[player.id]?.isPlaying == true
 
 /** Naam in de keuzelijst: "Deze telefoon" voor de eigen Sendspin-speler, anders alias of MA-naam. */
 private fun playerLabel(player: MassPlayer, state: UiState): String =

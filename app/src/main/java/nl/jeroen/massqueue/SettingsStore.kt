@@ -36,12 +36,14 @@ private val KEY_COMPACT_HEADER = booleanPreferencesKey("compact_header")
 private val KEY_DISCO_PLAYER = stringPreferencesKey("disco_player_id")
 private val KEY_PINNED_PLAYERS = stringSetPreferencesKey("pinned_players")
 private val KEY_SHOW_MA_HIDDEN_PLAYERS = booleanPreferencesKey("show_ma_hidden_players")
+private val KEY_PHONE_PLAYER_ON_TOP = booleanPreferencesKey("phone_player_on_top")
 private val KEY_SENDSPIN_CLIENT_ID = stringPreferencesKey("sendspin_client_id")
 private val KEY_SENDSPIN_CLIENT_NAME = stringPreferencesKey("sendspin_client_name")
 private val KEY_SENDSPIN_ENABLED = booleanPreferencesKey("sendspin_enabled")
 private val KEY_SENDSPIN_LOCAL_URL = stringPreferencesKey("sendspin_local_url")
 private val KEY_SENDSPIN_AUDIO_QUALITY = stringPreferencesKey("sendspin_audio_quality")
 private val KEY_LANGUAGE = stringPreferencesKey("app_language")
+private val KEY_DEVICE_NAME_DONE = booleanPreferencesKey("device_name_done")
 
 /** Vroegere vaste standaardnaam; wie die nog opgeslagen heeft, krijgt voortaan de naam met toestelmodel. */
 private const val LEGACY_SENDSPIN_CLIENT_NAME = "Spinflow telefoon"
@@ -98,7 +100,8 @@ data class SettingsData(
     val showCompactHeader: Boolean,
     val discoPlayerId: String?,
     val pinnedPlayerIds: Set<String>,
-    val showMaHiddenPlayers: Boolean
+    val showMaHiddenPlayers: Boolean,
+    val phonePlayerOnTop: Boolean
 )
 
 class SettingsStore(private val context: Context) {
@@ -160,7 +163,8 @@ class SettingsStore(private val context: Context) {
             showCompactHeader = prefs[KEY_COMPACT_HEADER] ?: false,
             discoPlayerId = prefs[KEY_DISCO_PLAYER],
             pinnedPlayerIds = prefs[KEY_PINNED_PLAYERS] ?: emptySet(),
-            showMaHiddenPlayers = prefs[KEY_SHOW_MA_HIDDEN_PLAYERS] ?: false
+            showMaHiddenPlayers = prefs[KEY_SHOW_MA_HIDDEN_PLAYERS] ?: false,
+            phonePlayerOnTop = prefs[KEY_PHONE_PLAYER_ON_TOP] ?: true
         )
     }
 
@@ -338,6 +342,12 @@ class SettingsStore(private val context: Context) {
         }
     }
 
+    suspend fun savePhonePlayerOnTop(onTop: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_PHONE_PLAYER_ON_TOP] = onTop
+        }
+    }
+
     suspend fun savePinnedPlayers(ids: Set<String>) {
         context.dataStore.edit { prefs ->
             prefs[KEY_PINNED_PLAYERS] = ids
@@ -409,6 +419,25 @@ class SettingsStore(private val context: Context) {
     suspend fun saveSendspinEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SENDSPIN_ENABLED] = enabled
+        }
+    }
+
+    /**
+     * Moet het welkomstscherm (verplicht een naam kiezen) nog getoond worden?
+     * Alleen bij een verse installatie: wie al een server heeft ingesteld, slaat het over.
+     */
+    suspend fun needsDeviceName(): Boolean {
+        val prefs = context.dataStore.data.first()
+        if (prefs[KEY_DEVICE_NAME_DONE] == true) return false
+        return !prefs.contains(KEY_URL)
+    }
+
+    /** Welkomstscherm afgerond: naam bewaren en telefoon als speler aanzetten. */
+    suspend fun completeDeviceName(name: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_SENDSPIN_CLIENT_NAME] = name.trim()
+            prefs[KEY_SENDSPIN_ENABLED] = true
+            prefs[KEY_DEVICE_NAME_DONE] = true
         }
     }
 

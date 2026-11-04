@@ -3,6 +3,8 @@ package nl.jeroen.massqueue.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -81,6 +83,8 @@ fun SettingsScreen(
     phonePlayerStatus: PhonePlayerStatus = PhonePlayerStatus(),
     onTogglePhonePlayer: ((Boolean) -> Unit)? = null,
     onSavePhonePlayer: ((name: String, localUrl: String) -> Unit)? = null,
+    phonePlayerOnTop: Boolean = true,
+    onTogglePhonePlayerOnTop: ((Boolean) -> Unit)? = null,
     phonePlayerAudioQuality: SendspinAudioQuality = SendspinAudioQuality.ORIGINAL,
     onSelectPhonePlayerAudioQuality: ((SendspinAudioQuality) -> Unit)? = null,
     onClose: (() -> Unit)? = null
@@ -386,6 +390,45 @@ fun SettingsScreen(
                                     )
                                 }
                             }
+                        }
+
+                        // Volgorde van de spelerslijst
+                        Spacer(Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .toggleable(
+                                    value = phonePlayerOnTop,
+                                    role = Role.Switch,
+                                    onValueChange = { onTogglePhonePlayerOnTop?.invoke(it) }
+                                )
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    tr("Telefoon bovenaan in de lijst", "Phone at the top of the list"),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    if (phonePlayerOnTop) tr(
+                                        "Aan: deze telefoon staat altijd bovenaan de lijst met spelers",
+                                        "On: this phone is always at the top of the list of players"
+                                    ) else tr(
+                                        "Uit: de speler die nu speelt staat bovenaan, daarna spelers waar nummers klaarstaan",
+                                        "Off: the player that is playing now is at the top, then players with songs lined up"
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Switch(
+                                checked = phonePlayerOnTop,
+                                onCheckedChange = null
+                            )
                         }
                     }
                 }

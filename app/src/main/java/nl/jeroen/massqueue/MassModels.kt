@@ -401,7 +401,12 @@ data class UiState(
     /** Vaste Sendspin-client-ID van deze telefoon: player_id, of (MA 2.10+) output_protocol_id onder een universal player. */
     val phonePlayerClientId: String? = null,
     /** Debug/uitzondering: ook spelers tonen die in MA op "Hide player in UI: Always" staan. */
-    val showMaHiddenPlayers: Boolean = false
+    val showMaHiddenPlayers: Boolean = false,
+    /**
+     * Aan: deze telefoon staat altijd bovenaan de spelerslijst. Uit: de speler die nu speelt
+     * bovenaan, daarna spelers met geladen nummers (de telefoon sorteert dan gewoon mee).
+     */
+    val phonePlayerOnTop: Boolean = true
 ) {
     /**
      * Is dit de eigen Sendspin-speler van dit toestel? Alleen op ID, nooit op naam: player_id is

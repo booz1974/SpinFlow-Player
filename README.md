@@ -81,8 +81,9 @@ De app is zich bewust van zijn locatie om de interface schoon en relevant te hou
 
 ### 5. Telefoon als speler 📱
 De telefoon kan zelf een Music Assistant-speler zijn: MA speelt dan muziek af op de telefoon, ook met de app op de achtergrond en zonder de MA-webinterface open te hebben.
+- **Eerste start**: Bij de allereerste start vraagt een welkomstscherm verplicht om een naam voor dit toestel (doorgaan kan pas met een naam). Met die naam verschijnt het als speler in MA, en *Telefoon als speler* gaat meteen aan. Wie al een server had ingesteld (update), krijgt dit scherm niet.
 - **Aanzetten**: In Instellingen staat de kaart *Telefoon als speler* met een schakelaar, de naam waaronder de telefoon in MA verschijnt (standaard de appnaam plus het toestelmodel, bijv. "SpinFlow Pixel 8", zodat meerdere toestellen en de Playground-app in MA uit elkaar te houden zijn) en een statusregel (bijv. "Verbonden (via server-adres)" of de reden waarom het niet lukt).
-- **Vaste speler**: De app maakt eenmalig een vaste client-ID aan, zodat MA steeds dezelfde speler ziet. In de spelerslijst staat hij bovenaan als **"Deze telefoon"** met een telefoon-icoon.
+- **Vaste speler**: De app maakt eenmalig een vaste client-ID aan, zodat MA steeds dezelfde speler ziet. In de spelerslijst staat hij bovenaan als **"Deze telefoon"** met een telefoon-icoon. Met *Telefoon bovenaan de lijst* uit sorteert hij gewoon mee en kiest de app bij opstarten de speler die nu speelt.
 - **Verbinding**: Via [Sendspin](https://github.com/Sendspin): eerst via het server-adres (bijv. over Tailscale) naar `wss://<server>/sendspin`, met het API-token als eerste `auth`-bericht; lukt dat niet, dan thuis rechtstreeks naar de Sendspin-poort (`ws://<MA-host>:8927/sendspin`, instelbaar). Bij mislukken probeert de app het opnieuw met oplopende wachttijd (5 s tot 60 s).
 - **Afspelen**: Ongecomprimeerde PCM via `AudioTrack`, getimed op de klok van de server zodat de telefoon in de pas blijft met andere spelers; kleine afwijkingen worden onhoorbaar bijgestuurd.
 - **Achtergrond & batterij**: Een foreground-service met mediamelding (Media3) houdt de speler actief. Wake- en wifilock worden alleen vastgehouden zolang er muziek speelt; bij pauze gaan ze na 10 minuten uit, en de wakelock heeft als vangnet een time-out die tijdens het spelen steeds verlengd wordt.
@@ -114,7 +115,7 @@ Het S-logo staat in `docs/logo/` als SVG en als PNG van 1024 en 2048 px (bijv. v
 1. **Android Studio**: Open dit project in Android Studio (Ladybug of nieuwer).
 2. **Command line (optioneel)**: De Gradle-wrapper zit in de repo, dus `./gradlew assembleDebug` (of `gradlew.bat` op Windows) bouwt een debug-APK zonder Android Studio. Nodig: JDK 17 (bijv. de JBR van Android Studio). `sendspin-jvm` komt via JitPack.
 3. **Release & tests**: De release-build gebruikt R8 (verkleinen en optimaliseren, flink soepeler voor Compose); de regels staan in `app/proguard-rules.pro` (o.a. het Sendspin-protocol heel laten voor Moshi). De mapping zit in de AAB zelf, dus Play Console krijgt hem automatisch. Unit tests: `./gradlew testDebugUnitTest`.
-4. **Server Instellen**: Bij de eerste start vraagt de app om de URL van je Music Assistant server en een Access Token. Hetzelfde token wordt gebruikt voor *Telefoon als speler*.
+4. **Server Instellen**: Bij de eerste start vraagt de app eerst om een naam voor het toestel, daarna om de URL van je Music Assistant server en een Access Token. Hetzelfde token wordt gebruikt voor *Telefoon als speler*.
 5. **Locatie**: Geef toestemming voor locatiegebruik voor de slimme filtering.
 
 ---

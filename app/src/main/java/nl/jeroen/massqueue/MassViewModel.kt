@@ -443,7 +443,8 @@ class MassViewModel : ViewModel() {
             val playingId = candidates.firstOrNull { isPlayingNow(it.id) }?.id
             val queuedId = candidates.firstOrNull { queueSummaries[it.id]?.hasItems == true }?.id
             val ownId = filteredPlayers.firstOrNull { currentState.isOwnPlayer(it) }?.id
-            val selected = (if (!userPickedPlayer) ownId else null) ?: currentState.selectedPlayerId?.let { id ->
+            // Staat "telefoon bovenaan" uit, dan gaat bij opstarten de spelende speler voor
+            val selected = (if (!userPickedPlayer && currentState.phonePlayerOnTop) ownId else null) ?: currentState.selectedPlayerId?.let { id ->
                 if (filteredPlayers.any { it.id == id }) id else null
             } ?: playingId ?: queuedId ?: candidates.firstOrNull()?.id
 
@@ -948,6 +949,10 @@ class MassViewModel : ViewModel() {
 
     fun setPinnedPlayerIds(ids: Set<String>) {
         _uiState.update { it.copy(pinnedPlayerIds = ids) }
+    }
+
+    fun setPhonePlayerOnTop(onTop: Boolean) {
+        _uiState.update { it.copy(phonePlayerOnTop = onTop) }
     }
 
     fun setShowMaHiddenPlayers(show: Boolean) {
