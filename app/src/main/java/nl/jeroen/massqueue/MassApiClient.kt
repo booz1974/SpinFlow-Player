@@ -496,6 +496,9 @@ class MassApiClient(baseUrl: String, private var authToken: String? = null) {
             }
         }
 
+        // Reclameblok ("Advert"): altijd de eigen Commercial Break-hoes, niet wat MA erbij zoekt.
+        if (AdvertArt.isAdvert(artist, track, combined)) image = AdvertArt.URI
+
         if (artist == null && track == null && album == null && image == null) return null
         return StreamMeta(artist, track, album, image)
     }
