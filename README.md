@@ -29,6 +29,9 @@ Boven in het scherm zit een cassettebandje dat laat zien wat er speelt:
 - **Disco & instellingen**: rechtsonder op het bandje zitten de disco-schakelaar 🪩 en het tandwiel voor de instellingen.
 - **Liever compact?** Zet in Instellingen de *Compacte Minimalist Header* aan voor een slanke balk met logo in plaats van het bandje.
 
+## Reclameblok 📺
+Speelt een radiozender reclame (titel zoals *Advert* of *Reclame*), dan toont SpinFlow niet de willekeurige hoes die Music Assistant of iTunes erbij zoekt, maar altijd de eigen **Commercial Break**-hoes die in de app zit. Ook in de melding, op het vergrendelscherm, in Android Auto en in "Eerder op deze zender".
+
 ## Kleurthema's 🎨
 Kies in Instellingen uit tien thema's: **Original**, **Cassette Futurism**, **Midnight Synthwave**, **Deep Emerald**, **OLED Minimalist**, **Retro Sunset**, **Amber Terminal**, **Espresso Mocha**, **Lavendel Dream** en **Rosé Blush**. De steunkleur van het thema komt overal terug, tot en met het Music Assistant-icoon in de iconenbalk (dat de MA-webinterface opent).
 

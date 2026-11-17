@@ -104,6 +104,8 @@ class ArtworkProvider : ContentProvider() {
 
         /** content://-URI voor Android Auto, of null als er geen (http)-afbeelding is. */
         fun uriFor(imageUrl: String?): Uri? {
+            // Hoes uit de app zelf (bv. de Commercial Break-hoes): Android Auto leest die direct.
+            if (imageUrl != null && imageUrl.startsWith("android.resource://")) return Uri.parse(imageUrl)
             if (imageUrl.isNullOrBlank() || !imageUrl.startsWith("http")) return null
             return Uri.Builder()
                 .scheme("content")
