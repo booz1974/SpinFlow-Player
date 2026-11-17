@@ -123,6 +123,8 @@ dependencies {
 
     // Locatie services
     implementation("com.google.android.gms:play-services-location:21.4.0")
+    // Forceert een recente fragment-versie; play-services trekt anders de verouderde 1.1.0 mee (Play Console-melding)
+    implementation("androidx.fragment:fragment:1.9.1")
 
     // Unit tests (tester)
     testImplementation("junit:junit:4.13.2")
