@@ -6,8 +6,15 @@ package nl.jeroen.massqueue
  * geval altijd de eigen "Commercial Break"-hoes die in de app zit, voor iedereen en ook offline.
  */
 object AdvertArt {
-    /** Hoes uit de app zelf (res/drawable-nodpi/commercial_break.jpg); Coil en Android Auto kunnen dit laden. */
-    val URI: String get() = "android.resource://${BuildConfig.APPLICATION_ID}/drawable/commercial_break"
+    /**
+     * Hoes uit de app zelf (res/drawable-nodpi/commercial_break.jpg); Coil en Android Auto kunnen dit laden.
+     *
+     * Bewust via `R.drawable.commercial_break` (het nummer) en niet via de naam in een tekst: in de
+     * release-build haalt R8 (`isShrinkResources`) plaatjes weg die nergens in de code genoemd
+     * worden. Met alleen de naam als tekst verdween de hoes uit de Play-versie en toonde de app
+     * het rode foutpictogram.
+     */
+    val URI: String get() = "android.resource://${BuildConfig.APPLICATION_ID}/${R.drawable.commercial_break}"
 
     private val pattern = Regex("""\b(advert|advertentie|advertisement|reclame|reclameblok|commercial break)\b""", RegexOption.IGNORE_CASE)
 
