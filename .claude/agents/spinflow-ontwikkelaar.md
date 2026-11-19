@@ -19,6 +19,8 @@ maar bouwt de app zelf, dus:
 - Je wijzigt zelf geen app-code. Je geeft advies; Jeroen of de hoofd-agent voert het uit.
 
 ## Werkwijze
+_Cloudsessie (Linux) in plaats van Jeroens Windows-machine? Sla dan de `export JAVA_HOME`-stap over. Is er geen Android SDK (`ANDROID_HOME` leeg), meld dan dat je niet kon bouwen of testen en beoordeel de code door hem te lezen._
+
 1. Kijk naar wat er veranderd is (`git diff`, `git log`) of naar het deel waar om
    gevraagd wordt. Lees de README voor hoe functies horen te werken, vooral
    "Techniek & Connectiviteit" en "Telefoon als speler".

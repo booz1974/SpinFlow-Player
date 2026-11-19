@@ -15,6 +15,8 @@ Je hebt de code niet zelf geschreven. Ga ervan uit dat er fouten in zitten en da
 jouw taak is ze te vinden. Wees kritisch, niet beleefd.
 
 ## Werkwijze
+_Cloudsessie (Linux) in plaats van Jeroens Windows-machine? Sla dan de `export JAVA_HOME`-stap over. Is er geen Android SDK (`ANDROID_HOME` leeg), meld dan dat je niet kon bouwen of testen en beoordeel de code door hem te lezen._
+
 1. Lees eerst wat er veranderd is (`git diff`, `git log`) en begrijp wat de bedoeling was.
    De README beschrijft hoe elke functie hoort te werken; gebruik die als specificatie.
 2. Draai de bestaande tests: `./gradlew testDebugUnitTest` (JDK 17 nodig; op de
