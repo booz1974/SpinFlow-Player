@@ -14,6 +14,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
+    <!-- Niet verplicht stellen: screenOrientation="portrait" en ACCESS_WIFI_STATE maken deze
+         anders stilzwijgend vereist, en dan blokkeert Play installatie op tablets, Chromebooks,
+         auto's en toestellen zonder wifi. De app werkt prima zonder. -->
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+
     <!-- Android Auto: verbindingsstatus uitlezen (content://androidx.car.app.connection) -->
     <queries>
         <package android:name="com.google.android.projection.gearhead" />
